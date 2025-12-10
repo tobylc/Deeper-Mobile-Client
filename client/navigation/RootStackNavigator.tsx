@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { HeaderButton } from "@react-navigation/elements";
@@ -11,10 +11,12 @@ import { HeaderTitle } from "@/components/HeaderTitle";
 
 import LoginScreen from "@/screens/LoginScreen";
 import SignupScreen from "@/screens/SignupScreen";
+import OnboardingScreen, { hasCompletedOnboarding } from "@/screens/OnboardingScreen";
 import HomeScreen from "@/screens/HomeScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
 
 export type AuthStackParamList = {
+  Onboarding: undefined;
   Login: undefined;
   Signup: undefined;
 };
@@ -31,9 +33,30 @@ const AppStack = createNativeStackNavigator<AppStackParamList>();
 
 function AuthNavigator() {
   const screenOptions = useScreenOptions();
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    checkOnboarding();
+  }, []);
+
+  const checkOnboarding = async () => {
+    const completed = await hasCompletedOnboarding();
+    setShowOnboarding(!completed);
+  };
+
+  if (showOnboarding === null) {
+    return null;
+  }
 
   return (
     <AuthStack.Navigator screenOptions={screenOptions}>
+      {showOnboarding ? (
+        <AuthStack.Screen
+          name="Onboarding"
+          component={OnboardingScreen}
+          options={{ headerShown: false }}
+        />
+      ) : null}
       <AuthStack.Screen
         name="Login"
         component={LoginScreen}

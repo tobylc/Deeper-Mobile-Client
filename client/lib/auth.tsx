@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiRequest, getAuthHeaders, API_URL } from "./api";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "https://joindeeper.com";
 const TOKEN_KEY = "@deeper_auth_token";
 const USER_KEY = "@deeper_user";
 const NOTIFICATIONS_KEY = "@deeper_notifications_enabled";
@@ -9,6 +9,11 @@ const NOTIFICATIONS_KEY = "@deeper_notifications_enabled";
 interface User {
   id: string;
   email: string;
+}
+
+interface AuthResponse {
+  token: string;
+  user: User;
 }
 
 interface AuthContextType {
@@ -57,37 +62,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchCurrentUser = async (authToken: string) => {
-    const response = await fetch(`${API_URL}/api/mobile/auth/user`, {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
+    const userData = await apiRequest<User>(
+      "/api/mobile/auth/user",
+      {
+        method: "GET",
+        headers: getAuthHeaders(authToken),
       },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch user");
-    }
-
-    const userData = await response.json();
+      { maxRetries: 2 }
+    );
+    
     setUser(userData);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
     return userData;
   };
 
   const login = async (email: string, password: string) => {
-    const response = await fetch(`${API_URL}/api/mobile/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const data = await apiRequest<AuthResponse>(
+      "/api/mobile/auth/login",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
       },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || "Login failed");
-    }
-
-    const data = await response.json();
+      { maxRetries: 1 }
+    );
     
     await AsyncStorage.setItem(TOKEN_KEY, data.token);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
@@ -97,20 +94,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signup = async (email: string, password: string) => {
-    const response = await fetch(`${API_URL}/api/mobile/auth/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const data = await apiRequest<AuthResponse>(
+      "/api/mobile/auth/signup",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
       },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || "Signup failed");
-    }
-
-    const data = await response.json();
+      { maxRetries: 1 }
+    );
     
     await AsyncStorage.setItem(TOKEN_KEY, data.token);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
@@ -135,18 +126,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/mobile/auth/refresh`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const data = await apiRequest<{ token: string }>(
+        "/api/mobile/auth/refresh",
+        {
+          method: "POST",
+          headers: getAuthHeaders(token),
         },
-      });
-
-      if (!response.ok) {
-        throw new Error("Token refresh failed");
-      }
-
-      const data = await response.json();
+        { maxRetries: 2 }
+      );
+      
       await AsyncStorage.setItem(TOKEN_KEY, data.token);
       setToken(data.token);
     } catch (error) {
@@ -192,18 +180,15 @@ export function useAuth() {
 }
 
 export async function registerPushToken(authToken: string, pushToken: string) {
-  const response = await fetch(`${API_URL}/api/mobile/push-token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${authToken}`,
+  await apiRequest(
+    "/api/mobile/push-token",
+    {
+      method: "POST",
+      headers: getAuthHeaders(authToken),
+      body: JSON.stringify({ token: pushToken }),
     },
-    body: JSON.stringify({ token: pushToken }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to register push token");
-  }
+    { maxRetries: 2 }
+  );
 }
 
 export async function getNotificationPreference(): Promise<boolean> {

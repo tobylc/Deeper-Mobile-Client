@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -17,7 +17,16 @@ import { ThemedView } from "@/components/ThemedView";
 import { Card } from "@/components/Card";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/lib/auth";
-import { Spacing, BorderRadius } from "@/constants/theme";
+import {
+  getBiometricCapability,
+  isBiometricEnabled,
+  setBiometricEnabled,
+  clearStoredCredentials,
+  getBiometricLabel,
+  getBiometricIcon,
+  BiometricCapability,
+} from "@/lib/biometric";
+import { Spacing } from "@/constants/theme";
 
 const NOTIFICATIONS_KEY = "@deeper_notifications_enabled";
 
@@ -26,19 +35,31 @@ export default function SettingsScreen() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [biometricCapability, setBiometricCapabilityState] = useState<BiometricCapability | null>(null);
+  const [biometricEnabled, setBiometricEnabledState] = useState(false);
 
-  React.useEffect(() => {
-    loadNotificationPreference();
+  useEffect(() => {
+    loadPreferences();
   }, []);
 
-  const loadNotificationPreference = async () => {
+  const loadPreferences = async () => {
     try {
-      const value = await AsyncStorage.getItem(NOTIFICATIONS_KEY);
-      if (value !== null) {
-        setNotificationsEnabled(value === "true");
+      const notifValue = await AsyncStorage.getItem(NOTIFICATIONS_KEY);
+      if (notifValue !== null) {
+        setNotificationsEnabled(notifValue === "true");
+      }
+
+      if (Platform.OS !== "web") {
+        const capability = await getBiometricCapability();
+        setBiometricCapabilityState(capability);
+
+        if (capability.isAvailable) {
+          const enabled = await isBiometricEnabled();
+          setBiometricEnabledState(enabled);
+        }
       }
     } catch (error) {
-      console.error("Error loading notification preference:", error);
+      console.error("Error loading preferences:", error);
     }
   };
 
@@ -51,6 +72,42 @@ export default function SettingsScreen() {
     }
   };
 
+  const toggleBiometric = async (value: boolean) => {
+    if (value) {
+      Alert.alert(
+        "Enable Biometric Login",
+        `When you log in next time, your credentials will be securely stored for ${getBiometricLabel(biometricCapability?.biometricType || "none")} login.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Enable",
+            onPress: async () => {
+              setBiometricEnabledState(true);
+              await setBiometricEnabled(true);
+            },
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        "Disable Biometric Login",
+        "This will remove your stored credentials. You'll need to enter your password to log in.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Disable",
+            style: "destructive",
+            onPress: async () => {
+              setBiometricEnabledState(false);
+              await setBiometricEnabled(false);
+              await clearStoredCredentials();
+            },
+          },
+        ]
+      );
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert(
       "Log Out",
@@ -60,7 +117,10 @@ export default function SettingsScreen() {
         {
           text: "Log Out",
           style: "destructive",
-          onPress: () => logout(),
+          onPress: async () => {
+            await clearStoredCredentials();
+            logout();
+          },
         },
       ]
     );
@@ -84,7 +144,8 @@ export default function SettingsScreen() {
                 {
                   text: "Yes, Delete My Account",
                   style: "destructive",
-                  onPress: () => {
+                  onPress: async () => {
+                    await clearStoredCredentials();
                     logout();
                   },
                 },
@@ -95,6 +156,9 @@ export default function SettingsScreen() {
       ]
     );
   };
+
+  const biometricLabel = biometricCapability ? getBiometricLabel(biometricCapability.biometricType) : "";
+  const biometricIcon = biometricCapability ? getBiometricIcon(biometricCapability.biometricType) : "shield";
 
   return (
     <ThemedView style={styles.container}>
@@ -133,6 +197,58 @@ export default function SettingsScreen() {
                   </ThemedText>
                 </View>
               </View>
+            </View>
+          </Card>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText
+            type="small"
+            style={[styles.sectionTitle, { color: theme.textSecondary }]}
+          >
+            SECURITY
+          </ThemedText>
+          <Card elevation={1} style={styles.card}>
+            {biometricCapability?.isAvailable && Platform.OS !== "web" ? (
+              <View style={[styles.row, styles.rowWithBorder, { borderBottomColor: theme.border }]}>
+                <View style={styles.rowContent}>
+                  <Feather name={biometricIcon as any} size={20} color={theme.textSecondary} />
+                  <View style={styles.rowText}>
+                    <ThemedText type="body" style={styles.rowLabel}>
+                      {biometricLabel}
+                    </ThemedText>
+                    <ThemedText
+                      type="small"
+                      style={{ color: theme.textSecondary }}
+                    >
+                      Quick login with {biometricLabel.toLowerCase()}
+                    </ThemedText>
+                  </View>
+                </View>
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={toggleBiometric}
+                  trackColor={{ false: theme.border, true: theme.primary }}
+                  thumbColor={Platform.OS === "ios" ? undefined : "#FFFFFF"}
+                />
+              </View>
+            ) : null}
+            <View style={styles.row}>
+              <View style={styles.rowContent}>
+                <Feather name="lock" size={20} color={theme.textSecondary} />
+                <View style={styles.rowText}>
+                  <ThemedText type="body" style={styles.rowLabel}>
+                    Password
+                  </ThemedText>
+                  <ThemedText
+                    type="small"
+                    style={{ color: theme.textSecondary }}
+                  >
+                    Change your password
+                  </ThemedText>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={20} color={theme.textSecondary} />
             </View>
           </Card>
         </View>
@@ -271,6 +387,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.lg,
+  },
+  rowWithBorder: {
+    borderBottomWidth: 1,
   },
   actionRow: {
     paddingVertical: Spacing.lg,
