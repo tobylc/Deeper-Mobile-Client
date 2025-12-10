@@ -20,6 +20,7 @@ export const Colors = {
     error: "#DC2626",
     success: "#10B981",
     inputBackground: "#F9FAFB",
+    cardBackground: "#FFFFFF",
   },
   dark: {
     text: "#F9FAFB",
@@ -37,6 +38,7 @@ export const Colors = {
     error: "#EF4444",
     success: "#34D399",
     inputBackground: "#1F2937",
+    cardBackground: "#1F2937",
   },
 };
 

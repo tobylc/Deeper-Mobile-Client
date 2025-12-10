@@ -86,7 +86,7 @@ function clearMetroCache() {
 async function checkMetroHealth() {
   try {
     const response = await fetch("http://localhost:8081/status", {
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(10000),
     });
     return response.ok;
   } catch {
@@ -101,10 +101,17 @@ async function startMetro() {
     return;
   }
 
-  console.log("Starting Metro...");
+  console.log("Starting Metro with increased memory allocation...");
+  
+  const env = {
+    ...process.env,
+    NODE_OPTIONS: "--max-old-space-size=4096",
+  };
+  
   metroProcess = spawn("npm", ["run", "expo:start:static:build"], {
     stdio: ["ignore", "pipe", "pipe"],
     detached: false,
+    env,
   });
 
   if (metroProcess.stdout) {
@@ -120,53 +127,91 @@ async function startMetro() {
     });
   }
 
-  for (let i = 0; i < 60; i++) {
+  metroProcess.on("error", (error) => {
+    console.error(`[Metro Process Error] ${error.message}`);
+  });
+
+  metroProcess.on("exit", (code) => {
+    if (code !== null && code !== 0) {
+      console.error(`[Metro] Process exited with code ${code}`);
+    }
+  });
+
+  const maxWaitTime = 120;
+  for (let i = 0; i < maxWaitTime; i++) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const healthy = await checkMetroHealth();
     if (healthy) {
       console.log("Metro ready");
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       return;
+    }
+    
+    if (i > 0 && i % 10 === 0) {
+      console.log(`Waiting for Metro... (${i}s)`);
     }
   }
 
-  console.error("Metro timeout");
+  console.error(`Metro timeout after ${maxWaitTime}s`);
   process.exit(1);
 }
 
-async function downloadFile(url, outputPath) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120_000);
+async function downloadFileWithRetry(url, outputPath, maxRetries = 3) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
 
-  try {
-    console.log(`Downloading: ${url}`);
-    const response = await fetch(url, { signal: controller.signal });
+    try {
+      if (attempt > 1) {
+        console.log(`Retry attempt ${attempt}/${maxRetries} for: ${url}`);
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+      }
+      
+      console.log(`Downloading: ${url}`);
+      const response = await fetch(url, { signal: controller.signal });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 200)}`);
+      }
+
+      const file = fs.createWriteStream(outputPath);
+      await pipeline(Readable.fromWeb(response.body), file);
+
+      const fileSize = fs.statSync(outputPath).size;
+
+      if (fileSize === 0) {
+        fs.unlinkSync(outputPath);
+        throw new Error("Downloaded file is empty");
+      }
+      
+      clearTimeout(timeoutId);
+      return;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (fs.existsSync(outputPath)) {
+        fs.unlinkSync(outputPath);
+      }
+
+      if (error.name === "AbortError") {
+        lastError = new Error(`Download timeout after 3m: ${url}`);
+      } else {
+        lastError = error;
+      }
+      
+      if (attempt === maxRetries) {
+        throw lastError;
+      }
     }
-
-    const file = fs.createWriteStream(outputPath);
-    await pipeline(Readable.fromWeb(response.body), file);
-
-    const fileSize = fs.statSync(outputPath).size;
-
-    if (fileSize === 0) {
-      fs.unlinkSync(outputPath);
-      throw new Error("Downloaded file is empty");
-    }
-  } catch (error) {
-    if (fs.existsSync(outputPath)) {
-      fs.unlinkSync(outputPath);
-    }
-
-    if (error.name === "AbortError") {
-      throw new Error(`Download timeout after 2m: ${url}`);
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
   }
+}
+
+async function downloadFile(url, outputPath) {
+  return downloadFileWithRetry(url, outputPath, 3);
 }
 
 async function downloadBundle(platform, timestamp) {
@@ -227,40 +272,22 @@ async function downloadBundlesAndManifests(timestamp) {
   console.log("This may take several minutes for production builds...");
 
   try {
-    const results = await Promise.allSettled([
-      downloadBundle("ios", timestamp),
-      downloadBundle("android", timestamp),
+    console.log("Downloading iOS bundle first...");
+    await downloadBundle("ios", timestamp);
+    
+    console.log("Downloading Android bundle...");
+    await downloadBundle("android", timestamp);
+    
+    console.log("Downloading manifests...");
+    const [iosManifest, androidManifest] = await Promise.all([
       downloadManifest("ios"),
       downloadManifest("android"),
     ]);
 
-    const failures = results
-      .map((result, index) => ({ result, index }))
-      .filter(({ result }) => result.status === "rejected");
-
-    if (failures.length > 0) {
-      const errorMessages = failures.map(({ result, index }) => {
-        const names = [
-          "iOS bundle",
-          "Android bundle",
-          "iOS manifest",
-          "Android manifest",
-        ];
-        return `  - ${names[index]}: ${result.reason?.message || result.reason}`;
-      });
-
-      exitWithError(`Download failed:\n${errorMessages.join("\n")}`);
-    }
-
-    const iosManifest =
-      results[2].status === "fulfilled" ? results[2].value : null;
-    const androidManifest =
-      results[3].status === "fulfilled" ? results[3].value : null;
-
     console.log("All downloads completed successfully");
     return { ios: iosManifest, android: androidManifest };
   } catch (error) {
-    exitWithError(`Unexpected download error: ${error.message}`);
+    exitWithError(`Download failed: ${error.message}`);
   }
 }
 
@@ -479,6 +506,7 @@ function updateManifests(manifests, timestamp, baseUrl, assetsByHash) {
 
 async function main() {
   console.log("Building static Expo Go deployment...");
+  console.log("Node memory limit:", process.env.NODE_OPTIONS || "default");
 
   setupSignalHandlers();
 
@@ -490,7 +518,7 @@ async function main() {
 
   await startMetro();
 
-  const downloadTimeout = 300000;
+  const downloadTimeout = 600000;
   const downloadPromise = downloadBundlesAndManifests(timestamp);
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => {

@@ -1,6 +1,5 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { router } from "expo-router";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -15,7 +14,8 @@ Notifications.setNotificationHandler({
 export interface NotificationData {
   type?: string;
   screen?: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export function setupNotificationListeners(
@@ -39,28 +39,15 @@ export function setupNotificationListeners(
       if (onNotificationResponse) {
         onNotificationResponse(response);
       }
-      handleNotificationResponse(response);
     }
   );
 
   return {
     removeListeners: () => {
-      Notifications.removeNotificationSubscription(notificationListener);
-      Notifications.removeNotificationSubscription(responseListener);
+      notificationListener.remove();
+      responseListener.remove();
     },
   };
-}
-
-function handleNotificationResponse(response: Notifications.NotificationResponse) {
-  const data = response.notification.request.content.data as NotificationData;
-
-  if (data?.screen) {
-    try {
-      router.push(data.screen as any);
-    } catch (error) {
-      console.error("Error navigating from notification:", error);
-    }
-  }
 }
 
 export async function getBadgeCount(): Promise<number> {
