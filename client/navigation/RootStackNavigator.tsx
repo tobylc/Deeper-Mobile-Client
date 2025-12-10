@@ -1,34 +1,109 @@
 import React from "react";
+import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import MainTabNavigator from "@/navigation/MainTabNavigator";
-import ModalScreen from "@/screens/ModalScreen";
-import { useScreenOptions } from "@/hooks/useScreenOptions";
+import { HeaderButton } from "@react-navigation/elements";
+import { Feather } from "@expo/vector-icons";
 
-export type RootStackParamList = {
-  Main: undefined;
-  Modal: undefined;
+import { useScreenOptions } from "@/hooks/useScreenOptions";
+import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/lib/auth";
+import { HeaderTitle } from "@/components/HeaderTitle";
+
+import LoginScreen from "@/screens/LoginScreen";
+import SignupScreen from "@/screens/SignupScreen";
+import HomeScreen from "@/screens/HomeScreen";
+import SettingsScreen from "@/screens/SettingsScreen";
+
+export type AuthStackParamList = {
+  Login: undefined;
+  Signup: undefined;
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+export type AppStackParamList = {
+  Home: undefined;
+  Settings: undefined;
+};
 
-export default function RootStackNavigator() {
+export type RootStackParamList = AuthStackParamList & AppStackParamList;
+
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const AppStack = createNativeStackNavigator<AppStackParamList>();
+
+function AuthNavigator() {
   const screenOptions = useScreenOptions();
 
   return (
-    <Stack.Navigator screenOptions={screenOptions}>
-      <Stack.Screen
-        name="Main"
-        component={MainTabNavigator}
+    <AuthStack.Navigator screenOptions={screenOptions}>
+      <AuthStack.Screen
+        name="Login"
+        component={LoginScreen}
         options={{ headerShown: false }}
       />
-      <Stack.Screen
-        name="Modal"
-        component={ModalScreen}
+      <AuthStack.Screen
+        name="Signup"
+        component={SignupScreen}
         options={{
-          presentation: "modal",
-          headerTitle: "Modal",
+          headerTitle: "Create Account",
+          headerBackTitle: "Back",
         }}
       />
-    </Stack.Navigator>
+    </AuthStack.Navigator>
   );
 }
+
+function AppNavigator() {
+  const screenOptions = useScreenOptions();
+  const { theme } = useTheme();
+
+  return (
+    <AppStack.Navigator screenOptions={screenOptions}>
+      <AppStack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={({ navigation }) => ({
+          headerTitle: () => <HeaderTitle title="Deeper" />,
+          headerRight: () => (
+            <HeaderButton
+              onPress={() => navigation.navigate("Settings")}
+              pressColor={theme.backgroundSecondary}
+              pressOpacity={0.7}
+            >
+              <Feather name="settings" size={24} color={theme.text} />
+            </HeaderButton>
+          ),
+        })}
+      />
+      <AppStack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          headerTitle: "Settings",
+          headerBackTitle: "Back",
+        }}
+      />
+    </AppStack.Navigator>
+  );
+}
+
+export default function RootStackNavigator() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const { theme } = useTheme();
+
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: theme.backgroundRoot }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
+  return isAuthenticated ? <AppNavigator /> : <AuthNavigator />;
+}
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});

@@ -7,6 +7,7 @@ export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
   type?: "h1" | "h2" | "h3" | "h4" | "body" | "small" | "link";
+  secondary?: boolean;
 };
 
 export function ThemedText({
@@ -14,6 +15,7 @@ export function ThemedText({
   lightColor,
   darkColor,
   type = "body",
+  secondary = false,
   ...rest
 }: ThemedTextProps) {
   const { theme, isDark } = useTheme();
@@ -29,6 +31,10 @@ export function ThemedText({
 
     if (type === "link") {
       return theme.link;
+    }
+
+    if (secondary) {
+      return theme.textSecondary;
     }
 
     return theme.text;
