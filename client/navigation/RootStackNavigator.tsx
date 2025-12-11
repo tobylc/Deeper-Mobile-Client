@@ -14,6 +14,10 @@ import SignupScreen from "@/screens/SignupScreen";
 import OnboardingScreen, { hasCompletedOnboarding } from "@/screens/OnboardingScreen";
 import HomeScreen from "@/screens/HomeScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
+import ConnectionsScreen from "@/screens/ConnectionsScreen";
+import InviteConnectionScreen from "@/screens/InviteConnectionScreen";
+import ConversationListScreen from "@/screens/ConversationListScreen";
+import ConversationScreen from "@/screens/ConversationScreen";
 
 export type AuthStackParamList = {
   Onboarding: undefined;
@@ -24,6 +28,10 @@ export type AuthStackParamList = {
 export type AppStackParamList = {
   Home: undefined;
   Settings: undefined;
+  Connections: undefined;
+  InviteConnection: undefined;
+  ConversationList: { connectionId: number };
+  Conversation: { conversationId: number };
 };
 
 export type RootStackParamList = AuthStackParamList & AppStackParamList;
@@ -101,6 +109,38 @@ function AppNavigator() {
         component={SettingsScreen}
         options={{
           headerTitle: "Settings",
+          headerBackTitle: "Back",
+        }}
+      />
+      <AppStack.Screen
+        name="Connections"
+        component={ConnectionsScreen}
+        options={{
+          headerTitle: "Connections",
+          headerBackTitle: "Back",
+        }}
+      />
+      <AppStack.Screen
+        name="InviteConnection"
+        component={InviteConnectionScreen}
+        options={{
+          headerTitle: "Invite Someone",
+          headerBackTitle: "Back",
+        }}
+      />
+      <AppStack.Screen
+        name="ConversationList"
+        component={ConversationListScreen}
+        options={{
+          headerTitle: "Conversations",
+          headerBackTitle: "Back",
+        }}
+      />
+      <AppStack.Screen
+        name="Conversation"
+        component={ConversationScreen}
+        options={{
+          headerTitle: "Conversation",
           headerBackTitle: "Back",
         }}
       />
