@@ -86,6 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       { maxRetries: 1 }
     );
     
+    if (!data.token) {
+      throw new Error("Login failed: No authentication token received");
+    }
+    if (!data.user) {
+      throw new Error("Login failed: No user data received");
+    }
+    
     await AsyncStorage.setItem(TOKEN_KEY, data.token);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
     
@@ -102,6 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       { maxRetries: 1 }
     );
+    
+    if (!data.token) {
+      throw new Error("Signup failed: No authentication token received. Please try again or contact support.");
+    }
+    if (!data.user) {
+      throw new Error("Signup failed: No user data received");
+    }
     
     await AsyncStorage.setItem(TOKEN_KEY, data.token);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
