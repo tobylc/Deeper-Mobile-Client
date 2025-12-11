@@ -8,10 +8,12 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as WebBrowser from "expo-web-browser";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -276,12 +278,17 @@ export default function SettingsScreen() {
                 </View>
                 <Pressable
                   style={[styles.upgradeButton, { backgroundColor: theme.primary }]}
-                  onPress={() =>
-                    Alert.alert(
-                      "Upgrade",
-                      "Subscription upgrades are managed through joindeeper.com"
-                    )
-                  }
+                  onPress={async () => {
+                    try {
+                      if (Platform.OS === "web") {
+                        await Linking.openURL("https://joindeeper.com/upgrade");
+                      } else {
+                        await WebBrowser.openBrowserAsync("https://joindeeper.com/upgrade");
+                      }
+                    } catch (error) {
+                      Alert.alert("Error", "Unable to open upgrade page");
+                    }
+                  }}
                 >
                   <Feather name="zap" size={16} color="#fff" />
                   <ThemedText type="body" style={{ color: "#fff", marginLeft: Spacing.sm }}>

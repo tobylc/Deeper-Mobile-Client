@@ -229,15 +229,19 @@ export function useAuth() {
 }
 
 export async function registerPushToken(authToken: string, pushToken: string) {
-  await apiRequest(
-    "/api/mobile/push-token",
-    {
-      method: "POST",
-      headers: getAuthHeaders(authToken),
-      body: JSON.stringify({ token: pushToken }),
-    },
-    { maxRetries: 2 }
-  );
+  try {
+    await apiRequest(
+      "/api/mobile/push-token",
+      {
+        method: "POST",
+        headers: getAuthHeaders(authToken),
+        body: JSON.stringify({ pushToken }),
+      },
+      { maxRetries: 1 }
+    );
+  } catch (error) {
+    console.warn("Push token registration failed (non-critical):", error);
+  }
 }
 
 export async function getNotificationPreference(): Promise<boolean> {
