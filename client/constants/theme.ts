@@ -1,8 +1,8 @@
 import { Platform } from "react-native";
 
-const oceanBlue = "#3B82F6";
+const ocean = "#4FACFE";
+const amber = "#D7A087";
 const deepOcean = "#1B2137";
-const amberGold = "#F59E0B";
 
 export const Colors = {
   light: {
@@ -10,10 +10,10 @@ export const Colors = {
     textSecondary: "#6B7280",
     buttonText: "#FFFFFF",
     tabIconDefault: "#687076",
-    tabIconSelected: oceanBlue,
-    link: oceanBlue,
-    primary: oceanBlue,
-    accent: amberGold,
+    tabIconSelected: ocean,
+    link: ocean,
+    primary: ocean,
+    accent: amber,
     backgroundRoot: "#FFFFFF",
     backgroundDefault: "#F9FAFB",
     backgroundSecondary: "#F3F4F6",
@@ -21,7 +21,7 @@ export const Colors = {
     border: "#E5E7EB",
     error: "#DC2626",
     success: "#10B981",
-    warning: amberGold,
+    warning: amber,
     inputBackground: "#F9FAFB",
     cardBackground: "#FFFFFF",
   },
@@ -30,10 +30,10 @@ export const Colors = {
     textSecondary: "#94A3B8",
     buttonText: "#FFFFFF",
     tabIconDefault: "#9BA1A6",
-    tabIconSelected: oceanBlue,
-    link: oceanBlue,
-    primary: oceanBlue,
-    accent: amberGold,
+    tabIconSelected: ocean,
+    link: ocean,
+    primary: ocean,
+    accent: amber,
     backgroundRoot: deepOcean,
     backgroundDefault: "#1E293B",
     backgroundSecondary: "#334155",
@@ -41,7 +41,7 @@ export const Colors = {
     border: "#334155",
     error: "#EF4444",
     success: "#34D399",
-    warning: amberGold,
+    warning: amber,
     inputBackground: "#1E293B",
     cardBackground: "#1E293B",
   },

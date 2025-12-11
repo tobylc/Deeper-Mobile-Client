@@ -11,177 +11,116 @@ import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
-interface Question {
-  id: number;
-  text: string;
-  category: string;
-}
-
-interface QuestionCategory {
-  id: string;
-  label: string;
-  icon: keyof typeof Feather.glyphMap;
-  questions: Question[];
-}
-
-const QUESTION_CATEGORIES: Record<string, QuestionCategory[]> = {
+const questionsByCategory: Record<string, string[]> = {
   "Parent-Child": [
-    {
-      id: "memories",
-      label: "Memories",
-      icon: "camera",
-      questions: [
-        { id: 1, text: "What's your favorite memory of us together?", category: "memories" },
-        { id: 2, text: "What was your happiest moment from my childhood?", category: "memories" },
-        { id: 3, text: "What tradition do you wish we kept?", category: "memories" },
-      ],
-    },
-    {
-      id: "understanding",
-      label: "Understanding",
-      icon: "heart",
-      questions: [
-        { id: 4, text: "What do you wish I understood better about you?", category: "understanding" },
-        { id: 5, text: "What was the hardest part about raising me?", category: "understanding" },
-        { id: 6, text: "What life lesson took you the longest to learn?", category: "understanding" },
-      ],
-    },
-    {
-      id: "dreams",
-      label: "Dreams",
-      icon: "star",
-      questions: [
-        { id: 7, text: "What dreams did you have for me when I was born?", category: "dreams" },
-        { id: 8, text: "What do you hope our relationship looks like in 10 years?", category: "dreams" },
-        { id: 9, text: "What's something you've always wanted to tell me?", category: "dreams" },
-      ],
-    },
+    "What's one family tradition you hope to continue?",
+    "When did you feel most proud of me recently?",
+    "What was your biggest worry as a teenager?",
+    "What's something you wish you could tell your younger self?",
+    "What family story do you think I should know?",
+    "How have you grown as a person since becoming a parent?",
+    "What's one thing you hope I remember about our relationship?",
+    "What was the most challenging part of your childhood?",
+    "What do you think our family does really well together?",
+    "What's a mistake you made that taught you something important?",
+    "What are you most excited about for my future?",
+    "What values do you hope I carry with me through life?",
   ],
+  
   "Romantic Partners": [
-    {
-      id: "connection",
-      label: "Connection",
-      icon: "link",
-      questions: [
-        { id: 10, text: "When did you first know you loved me?", category: "connection" },
-        { id: 11, text: "What's something small I do that means a lot to you?", category: "connection" },
-        { id: 12, text: "What makes you feel most connected to me?", category: "connection" },
-      ],
-    },
-    {
-      id: "growth",
-      label: "Growth",
-      icon: "trending-up",
-      questions: [
-        { id: 13, text: "How have I helped you grow as a person?", category: "growth" },
-        { id: 14, text: "What challenge do you think we've overcome together?", category: "growth" },
-        { id: 15, text: "What's something you'd like us to work on together?", category: "growth" },
-      ],
-    },
-    {
-      id: "future",
-      label: "Future",
-      icon: "compass",
-      questions: [
-        { id: 16, text: "What adventure would you like us to have together?", category: "future" },
-        { id: 17, text: "What does your ideal day with me look like?", category: "future" },
-        { id: 18, text: "What are you most excited about for our future?", category: "future" },
-      ],
-    },
+    "What's one dream we haven't talked about yet?",
+    "When do you feel most connected to me?",
+    "What's something small I do that makes you smile?",
+    "How have you grown since we've been together?",
+    "What's your favorite memory of us from this year?",
+    "What do you need more of in our relationship?",
+    "What's something you're grateful for about our partnership?",
+    "How do you see our relationship evolving in the future?",
+    "What's one way I can better support your dreams?",
+    "What challenge are you facing that I might not know about?",
+    "What adventure do you want us to take together?",
+    "What about our relationship surprises you most?",
   ],
-  Friends: [
-    {
-      id: "bond",
-      label: "Bond",
-      icon: "users",
-      questions: [
-        { id: 19, text: "What made you want to be my friend?", category: "bond" },
-        { id: 20, text: "What's your favorite thing about our friendship?", category: "bond" },
-        { id: 21, text: "When did you realize we'd be close friends?", category: "bond" },
-      ],
-    },
-    {
-      id: "support",
-      label: "Support",
-      icon: "shield",
-      questions: [
-        { id: 22, text: "How can I be a better friend to you?", category: "support" },
-        { id: 23, text: "What's a time I really showed up for you?", category: "support" },
-        { id: 24, text: "What do you need most from our friendship right now?", category: "support" },
-      ],
-    },
-    {
-      id: "adventures",
-      label: "Adventures",
-      icon: "map",
-      questions: [
-        { id: 25, text: "What's your favorite memory of us?", category: "adventures" },
-        { id: 26, text: "What bucket list item should we do together?", category: "adventures" },
-        { id: 27, text: "What adventure should we plan next?", category: "adventures" },
-      ],
-    },
+
+  "Friends": [
+    "What's one thing you've learned about yourself this year?",
+    "If you could time travel, what period would you visit?",
+    "What's the best advice someone has given you lately?",
+    "What's something you're working on that excites you?",
+    "What's a fear you've been trying to overcome?",
+    "Who has influenced you the most recently and why?",
+    "What's your biggest hope for the next five years?",
+    "What's something you want to try but haven't yet?",
+    "What book or movie has changed your perspective lately?",
+    "What's the most meaningful compliment you've received?",
+    "What tradition or ritual makes you feel grounded?",
+    "What's one thing you wish people understood about you?",
   ],
-  Siblings: [
-    {
-      id: "childhood",
-      label: "Childhood",
-      icon: "home",
-      questions: [
-        { id: 28, text: "What's your favorite childhood memory of us?", category: "childhood" },
-        { id: 29, text: "What did you think of me when we were kids?", category: "childhood" },
-        { id: 30, text: "What family tradition do you miss most?", category: "childhood" },
-      ],
-    },
-    {
-      id: "understanding",
-      label: "Understanding",
-      icon: "heart",
-      questions: [
-        { id: 31, text: "What do you wish I understood about your life now?", category: "understanding" },
-        { id: 32, text: "What's something about our childhood I might have missed?", category: "understanding" },
-        { id: 33, text: "How has our relationship changed over the years?", category: "understanding" },
-      ],
-    },
+
+  "Siblings": [
+    "What's your favorite childhood memory of us together?",
+    "How has our relationship changed as we've grown up?",
+    "What do you think I'm really good at?",
+    "What family trait do you think we both inherited?",
+    "What's something you always admired about me?",
+    "How do you think we're similar and different?",
+    "What role did I play in your childhood?",
+    "What's a lesson you learned from watching me?",
+    "What do you hope our relationship looks like in 10 years?",
+    "What family story always makes you laugh?",
+    "What's something you want to tell our future kids about growing up together?",
+    "What support do you need from me right now?",
   ],
-  Colleagues: [
-    {
-      id: "professional",
-      label: "Professional",
-      icon: "briefcase",
-      questions: [
-        { id: 34, text: "What's the most valuable thing I've taught you?", category: "professional" },
-        { id: 35, text: "What skill do you admire most in me?", category: "professional" },
-        { id: 36, text: "What project together are you most proud of?", category: "professional" },
-      ],
-    },
-    {
-      id: "growth",
-      label: "Growth",
-      icon: "trending-up",
-      questions: [
-        { id: 37, text: "How can I better support your career goals?", category: "growth" },
-        { id: 38, text: "What feedback have you been hesitant to give me?", category: "growth" },
-        { id: 39, text: "What do you see as my biggest growth area?", category: "growth" },
-      ],
-    },
+
+  "Grandparents": [
+    "What was the world like when you were my age?",
+    "What's the most important lesson life has taught you?",
+    "What's something you want me to always remember?",
+    "What was your favorite thing about being young?",
+    "What change have you seen that amazes you most?",
+    "What wisdom do you wish you could pass on to everyone?",
+    "What's your proudest moment as a grandparent?",
+    "What tradition from your childhood do you miss?",
+    "What do you hope I learn that you had to figure out the hard way?",
+    "What's the best decision you ever made?",
+    "What do you want your legacy to be?",
+    "What story about our family should never be forgotten?",
+  ],
+
+  "Long-distance": [
+    "What's something beautiful you saw today?",
+    "If I were there right now, what would we do?",
+    "What's one thing that reminded you of me this week?",
+    "What's your favorite memory of us when we were last together?",
+    "What are you most looking forward to when we see each other next?",
+    "What's something happening in your daily life that I'd find interesting?",
+    "How has being apart changed how you think about our relationship?",
+    "What's a small moment from your day you want to share with me?",
+    "What's something you wish I could experience with you right now?",
+    "What song or movie made you think of me recently?",
+    "What's one thing you appreciate about me more because of the distance?",
+    "What dream do you have about our future together?",
+  ],
+
+  "Other": [
+    "What's something you've been thinking about lately?",
+    "What's bringing you joy right now?",
+    "What challenge are you facing that you'd like support with?",
+    "What's something you're grateful for today?",
+    "What's a goal you're working toward?",
+    "What's something you wish more people knew about you?",
+    "What's the most interesting thing you've learned recently?",
+    "What's a value that's important to you and why?",
+    "What's something that always makes you feel better?",
+    "What's a question you've been asking yourself?",
+    "What's something you want to get better at?",
+    "What's a memory that always makes you smile?",
   ],
 };
 
-const DEFAULT_QUESTIONS: QuestionCategory[] = [
-  {
-    id: "general",
-    label: "General",
-    icon: "message-circle",
-    questions: [
-      { id: 100, text: "What's something you've never told me before?", category: "general" },
-      { id: 101, text: "What do you wish I understood better about you?", category: "general" },
-      { id: 102, text: "What's been on your mind lately?", category: "general" },
-      { id: 103, text: "What makes you feel most appreciated?", category: "general" },
-      { id: 104, text: "What's something you'd like us to do together?", category: "general" },
-      { id: 105, text: "What's the best advice you've ever received?", category: "general" },
-    ],
-  },
-];
+function getQuestionsByCategory(category: string): string[] {
+  return questionsByCategory[category as keyof typeof questionsByCategory] || questionsByCategory["Other"];
+}
 
 interface QuestionSuggestionsProps {
   relationshipType?: string;
@@ -191,10 +130,31 @@ interface QuestionSuggestionsProps {
 
 export function QuestionSuggestions({ relationshipType, onSelectQuestion, onClose }: QuestionSuggestionsProps) {
   const { theme } = useTheme();
-  const categories = QUESTION_CATEGORIES[relationshipType || ""] || DEFAULT_QUESTIONS;
-  const [selectedCategory, setSelectedCategory] = useState(categories[0]?.id || "");
+  
+  const availableCategories = relationshipType && questionsByCategory[relationshipType]
+    ? [relationshipType, "Other"]
+    : Object.keys(questionsByCategory);
+  
+  const [selectedCategory, setSelectedCategory] = useState(
+    relationshipType && questionsByCategory[relationshipType] 
+      ? relationshipType 
+      : availableCategories[0]
+  );
 
-  const currentCategory = categories.find((c) => c.id === selectedCategory) || categories[0];
+  const currentQuestions = getQuestionsByCategory(selectedCategory);
+
+  const getCategoryIcon = (category: string): keyof typeof Feather.glyphMap => {
+    const icons: Record<string, keyof typeof Feather.glyphMap> = {
+      "Parent-Child": "home",
+      "Romantic Partners": "heart",
+      "Friends": "users",
+      "Siblings": "user-plus",
+      "Grandparents": "award",
+      "Long-distance": "globe",
+      "Other": "message-circle",
+    };
+    return icons[category] || "message-circle";
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundDefault }]}>
@@ -211,33 +171,33 @@ export function QuestionSuggestions({ relationshipType, onSelectQuestion, onClos
         style={styles.categoryTabs}
         contentContainerStyle={styles.categoryTabsContent}
       >
-        {categories.map((category) => (
+        {availableCategories.map((category) => (
           <Pressable
-            key={category.id}
+            key={category}
             style={[
               styles.categoryTab,
               {
                 backgroundColor:
-                  selectedCategory === category.id
+                  selectedCategory === category
                     ? theme.primary
                     : theme.backgroundSecondary,
               },
             ]}
-            onPress={() => setSelectedCategory(category.id)}
+            onPress={() => setSelectedCategory(category)}
           >
             <Feather
-              name={category.icon}
+              name={getCategoryIcon(category)}
               size={16}
-              color={selectedCategory === category.id ? "#fff" : theme.text}
+              color={selectedCategory === category ? "#fff" : theme.text}
             />
             <ThemedText
               type="small"
               style={{
-                color: selectedCategory === category.id ? "#fff" : theme.text,
+                color: selectedCategory === category ? "#fff" : theme.text,
                 marginLeft: Spacing.xs,
               }}
             >
-              {category.label}
+              {category}
             </ThemedText>
           </Pressable>
         ))}
@@ -247,14 +207,14 @@ export function QuestionSuggestions({ relationshipType, onSelectQuestion, onClos
         style={styles.questionsList}
         showsVerticalScrollIndicator={false}
       >
-        {currentCategory?.questions.map((question) => (
+        {currentQuestions.map((question, index) => (
           <Pressable
-            key={question.id}
+            key={index}
             style={[styles.questionItem, { backgroundColor: theme.backgroundSecondary }]}
-            onPress={() => onSelectQuestion(question.text)}
+            onPress={() => onSelectQuestion(question)}
           >
             <ThemedText type="body" style={styles.questionText}>
-              {question.text}
+              {question}
             </ThemedText>
             <Feather name="chevron-right" size={20} color={theme.textSecondary} />
           </Pressable>
@@ -268,7 +228,7 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: BorderRadius.xl,
     overflow: "hidden",
-    maxHeight: 400,
+    maxHeight: 450,
   },
   header: {
     flexDirection: "row",
