@@ -1,0 +1,534 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Clean gray and blue palette inspired by glass navigation */
+  --background: hsl(210, 20%, 98%); /* Light gray background */
+  --foreground: hsl(210, 20%, 15%); /* Dark text */
+  --muted: hsl(210, 15%, 92%); /* Light gray elements */
+  --muted-foreground: hsl(210, 10%, 50%); /* Muted text */
+  --popover: hsl(210, 20%, 100%); /* White popover */
+  --popover-foreground: hsl(210, 20%, 15%);
+  --card: hsl(210, 20%, 100%); /* White cards */
+  --card-foreground: hsl(210, 20%, 15%);
+  --border: hsl(210, 15%, 85%); /* Light border */
+  --input: hsl(210, 15%, 97%); /* Light input background */
+  --primary: hsl(215, 85%, 60%); /* Blue primary */
+  --primary-foreground: hsl(0, 0%, 100%); /* White text on blue */
+  --secondary: hsl(210, 15%, 88%); /* Light gray secondary */
+  --secondary-foreground: hsl(210, 20%, 15%);
+  --accent: hsl(210, 15%, 90%); /* Subtle accent */
+  --accent-foreground: hsl(210, 20%, 15%);
+  --destructive: hsl(0, 70%, 60%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(215, 85%, 60%);
+  --radius: 0.75rem;
+  --success: hsl(120, 50%, 45%);
+  --amber: hsl(45, 100%, 51%);
+  --amber-hover: hsl(45, 100%, 47%);
+  
+  /* Custom color variables */
+  --nav-gray: hsl(210, 15%, 20%); /* Dark gray for navigation */
+  --nav-gray-transparent: hsla(210, 15%, 20%, 0.9); /* Transparent nav */
+  --button-blue: hsl(215, 85%, 60%); /* Primary blue for buttons */
+  --button-blue-hover: hsl(215, 85%, 55%); /* Darker blue on hover */
+  --light-gray: hsl(210, 15%, 95%); /* Very light gray sections */
+  --medium-gray: hsl(210, 10%, 70%); /* Medium gray text */
+  --dark-gray: hsl(210, 20%, 25%); /* Dark gray text */
+}
+
+.dark {
+  --background: hsl(210, 20%, 8%); /* Dark background */
+  --foreground: hsl(210, 15%, 90%); /* Light text */
+  --muted: hsl(210, 15%, 15%); /* Dark muted elements */
+  --muted-foreground: hsl(210, 10%, 60%); /* Muted text */
+  --popover: hsl(210, 20%, 10%); /* Dark popover */
+  --popover-foreground: hsl(210, 15%, 90%);
+  --card: hsl(210, 20%, 12%); /* Dark cards */
+  --card-foreground: hsl(210, 15%, 90%);
+  --border: hsl(210, 15%, 20%); /* Dark border */
+  --input: hsl(210, 15%, 15%); /* Dark input background */
+  --primary: hsl(215, 85%, 60%); /* Same blue primary */
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(210, 15%, 18%); /* Dark gray secondary */
+  --secondary-foreground: hsl(210, 15%, 90%);
+  --accent: hsl(210, 15%, 20%); /* Dark accent */
+  --accent-foreground: hsl(210, 15%, 90%);
+  --destructive: hsl(0, 70%, 60%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(215, 85%, 60%);
+  --radius: 0.75rem;
+  --success: hsl(120, 50%, 55%);
+  --amber: hsl(45, 100%, 51%);
+  --amber-hover: hsl(45, 100%, 47%);
+  
+  /* Custom color variables for dark mode */
+  --nav-gray: hsl(210, 15%, 15%);
+  --nav-gray-transparent: hsla(210, 15%, 15%, 0.9);
+  --button-blue: hsl(215, 85%, 60%);
+  --button-blue-hover: hsl(215, 85%, 65%);
+  --light-gray: hsl(210, 15%, 10%);
+  --medium-gray: hsl(210, 10%, 40%);
+  --dark-gray: hsl(210, 15%, 80%);
+}
+
+/* Glowing amber text effect */
+.glow-amber {
+  background: linear-gradient(45deg, #f59e0b, #fbbf24, #f59e0b);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.5), 0 0 20px rgba(245, 158, 11, 0.3);
+  animation: glowPulse 2s ease-in-out infinite alternate;
+}
+
+/* Glowing blue text effect */
+.glow-blue {
+  background: linear-gradient(45deg, #3b82f6, #60a5fa, #3b82f6);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.3);
+  animation: glowPulseBlue 2s ease-in-out infinite alternate;
+}
+
+/* Glowing amber-blue gradient text effect */
+.glow-amber-blue {
+  background: linear-gradient(45deg, #f59e0b, #3b82f6, #fbbf24, #60a5fa, #f59e0b);
+  background-size: 300% 300%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.4), 0 0 15px rgba(59, 130, 246, 0.4), 0 0 20px rgba(245, 158, 11, 0.2);
+  animation: glowPulseAmberBlue 3s ease-in-out infinite alternate;
+}
+
+@keyframes glowPulse {
+  0% {
+    background-position: 0% 50%;
+    filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.4));
+  }
+  100% {
+    background-position: 100% 50%;
+    filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.7));
+  }
+}
+
+@keyframes glowPulseBlue {
+  0% {
+    background-position: 0% 50%;
+    filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.4));
+  }
+  100% {
+    background-position: 100% 50%;
+    filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.7));
+  }
+}
+
+@keyframes glowPulseAmberBlue {
+  0% {
+    background-position: 0% 50%;
+    filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.4)) drop-shadow(0 0 8px rgba(59, 130, 246, 0.3));
+  }
+  50% {
+    background-position: 50% 50%;
+    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5)) drop-shadow(0 0 12px rgba(245, 158, 11, 0.4));
+  }
+  100% {
+    background-position: 100% 50%;
+    filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.6)) drop-shadow(0 0 18px rgba(59, 130, 246, 0.5));
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter antialiased;
+    background: linear-gradient(135deg, hsl(210, 20%, 98%) 0%, hsl(210, 15%, 95%) 100%);
+    overflow-x: hidden;
+  }
+  
+  html {
+    overflow-x: hidden;
+  }
+  
+  .dark body {
+    background: linear-gradient(135deg, hsl(210, 20%, 8%) 0%, hsl(210, 15%, 10%) 100%);
+  }
+
+  .font-inter {
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  /* Glassmorphism navigation */
+  .glass-nav {
+    background: var(--nav-gray-transparent);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  /* Pricing card hover and selection states */
+  .pricing-card {
+    @apply transition-all duration-300 ease-in-out cursor-pointer;
+    border: 2px solid hsl(210, 15%, 85%);
+    overflow: visible;
+    position: relative;
+  }
+
+  .pricing-card:hover {
+    @apply bg-blue-50;
+    border: 2px solid hsl(215, 85%, 60%);
+  }
+
+  .pricing-card.selected {
+    @apply bg-blue-50;
+    border: 2px solid hsl(215, 85%, 60%);
+  }
+
+  /* Mobile responsive fixes for pricing */
+  @media (max-width: 768px) {
+    .pricing-card {
+      margin-bottom: 2rem;
+      min-height: auto;
+      margin-top: 1rem;
+    }
+    
+    .pricing-card .absolute {
+      position: relative;
+      top: 0;
+      left: 0;
+      transform: none;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: center;
+    }
+  }
+  
+  /* Ensure badge has proper spacing */
+  .pricing-card {
+    margin-top: 1rem;
+  }
+  
+  .pricing-card .absolute {
+    z-index: 10;
+  }
+
+  /* Default card icon styling - blue background with white icon */
+  .card-icon {
+    @apply bg-blue-500 text-white transition-all duration-300;
+  }
+
+  .pricing-card:hover .card-icon {
+    @apply bg-blue-500 text-white;
+  }
+
+  .pricing-card.selected .card-icon {
+    @apply bg-blue-500 text-white;
+  }
+
+  /* Default card button styling - blue outline with blue text */
+  .card-button {
+    @apply border-2 border-blue-500 text-blue-500 bg-transparent transition-all duration-300;
+  }
+
+  .pricing-card:hover .card-button {
+    @apply bg-blue-500 text-white border-blue-500;
+  }
+
+  .pricing-card.selected .card-button {
+    @apply bg-blue-500 text-white border-blue-500;
+  }
+
+  /* Card variations */
+  .card-elevated {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border-radius: var(--radius);
+  }
+
+  .card-warm {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+  }
+
+  /* Button variations */
+  .btn-ocean {
+    background: var(--button-blue);
+    color: hsl(var(--primary-foreground));
+    border: none;
+    border-radius: var(--radius);
+    transition: all 0.2s ease-in-out;
+  }
+
+  .btn-ocean:hover {
+    background: var(--button-blue-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px hsla(215, 85%, 60%, 0.3);
+  }
+
+  .btn-coral {
+    background: var(--button-blue);
+    color: hsl(var(--primary-foreground));
+    border: none;
+    border-radius: var(--radius);
+    transition: all 0.2s ease-in-out;
+  }
+
+  .btn-coral:hover {
+    background: var(--button-blue-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px hsla(215, 85%, 60%, 0.3);
+  }
+
+  /* Professional typewriter waiting text styles */
+  @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+  
+  .typewriter-container {
+    position: relative;
+    padding: 16px 24px;
+    /* Remove background - text appears directly on the page background */
+  }
+
+  /* Remove decorative elements - clean typewriter text only */
+
+  .typewriter-text {
+    font-family: 'Courier Prime', 'Courier New', monospace;
+    color: #1a1a1a;
+    letter-spacing: 0.8px;
+    line-height: 1.4;
+    font-weight: 400;
+    
+    /* Ultra-realistic old ink typewriter effect */
+    text-shadow: 
+      /* Main ink blob effect */
+      0.8px 0.8px 0px rgba(0,0,0,0.3),
+      0.4px 0.4px 1px rgba(0,0,0,0.2),
+      /* Ink spread and bleeding */
+      -0.3px 0.2px 0px rgba(0,0,0,0.15),
+      0.2px -0.3px 0px rgba(0,0,0,0.12),
+      /* Subtle ink variations */
+      0px 0px 2px rgba(0,0,0,0.08),
+      /* Paper impression depth */
+      0px 1px 0px rgba(0,0,0,0.05);
+      
+    /* Slight font weight variation to mimic typewriter key pressure differences */
+    filter: contrast(1.1) brightness(0.95);
+  }
+
+  .typewriter-main {
+    font-size: 1.125rem; /* 18px - 50% smaller than original */
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #0f0f0f;
+    /* Enhanced ink density for main heading */
+    text-shadow: 
+      0.9px 0.9px 0px rgba(0,0,0,0.4),
+      0.5px 0.5px 1px rgba(0,0,0,0.25),
+      -0.4px 0.3px 0px rgba(0,0,0,0.18),
+      0.3px -0.4px 0px rgba(0,0,0,0.15),
+      0px 0px 2px rgba(0,0,0,0.1),
+      0px 1px 0px rgba(0,0,0,0.08);
+  }
+
+  .typewriter-sub {
+    font-size: 0.875rem; /* 14px - 50% smaller than original */
+    color: #2a2a2a;
+    font-weight: 400;
+    font-style: italic;
+    /* Lighter ink effect for subtitle */
+    text-shadow: 
+      0.6px 0.6px 0px rgba(0,0,0,0.25),
+      0.3px 0.3px 1px rgba(0,0,0,0.15),
+      -0.2px 0.1px 0px rgba(0,0,0,0.1),
+      0.1px -0.2px 0px rgba(0,0,0,0.08),
+      0px 0px 1px rgba(0,0,0,0.05);
+  }
+
+  @keyframes typewriterBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  .typewriter-cursor {
+    display: inline-block;
+    background-color: #0f0f0f;
+    width: 2px;
+    height: 1.2em;
+    margin-left: 1px;
+    animation: typewriterBlink 1s infinite;
+    position: relative;
+    top: 0.1em;
+    /* Vintage typewriter cursor with ink bleeding effect */
+    box-shadow: 
+      0.5px 0 0 rgba(0,0,0,0.3),
+      -0.5px 0 0 rgba(0,0,0,0.2),
+      0 0 1px rgba(0,0,0,0.4);
+    border-radius: 0.5px;
+  }
+
+  /* Responsive sizing */
+  @media (min-width: 640px) {
+    .typewriter-main {
+      font-size: 1.25rem; /* 20px */
+    }
+    
+    .typewriter-sub {
+      font-size: 1rem; /* 16px */
+    }
+  }
+
+  @media (min-width: 768px) {
+    .typewriter-main {
+      font-size: 1.375rem; /* 22px */
+    }
+    
+    .typewriter-sub {
+      font-size: 1.125rem; /* 18px */
+    }
+  }
+
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    .typewriter-cursor {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
+  /* Gradient backgrounds */
+  .gradient-warm {
+    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--light-gray)) 100%);
+  }
+
+  .gradient-ocean {
+    background: linear-gradient(135deg, var(--button-blue) 0%, var(--button-blue-hover) 100%);
+  }
+
+  .gradient-amber {
+    background: hsl(var(--secondary));
+  }
+
+  .gradient-teal {
+    background: hsl(var(--accent));
+  }
+
+  /* Text variations */
+  .text-ocean-blue {
+    color: var(--button-blue);
+  }
+
+  .text-warm-amber {
+    color: hsl(var(--medium-gray));
+  }
+
+  .text-soft-teal {
+    color: hsl(var(--accent-foreground));
+  }
+
+  .text-deep-charcoal {
+    color: hsl(var(--dark-gray));
+  }
+
+  .text-soft-white {
+    color: hsl(var(--foreground));
+  }
+
+  .text-warm-coral {
+    color: var(--button-blue);
+  }
+
+  /* Icon styling */
+  .icon-ocean {
+    color: var(--button-blue);
+  }
+
+  .icon-amber {
+    color: hsl(var(--medium-gray));
+  }
+
+  .icon-teal {
+    color: hsl(var(--accent-foreground));
+  }
+
+  .icon-white {
+    color: hsl(var(--foreground));
+  }
+
+  /* Conversation interface styles */
+  .message-bubble {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .message-bubble.own {
+    background: var(--button-blue);
+    color: hsl(var(--primary-foreground));
+    border-color: transparent;
+  }
+
+  /* Remove all focus styles from conversation textarea */
+  .conversation-textarea {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    ring: none !important;
+  }
+
+  .conversation-textarea:focus,
+  .conversation-textarea:focus-visible,
+  .conversation-textarea:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    ring: none !important;
+    ring-offset: 0 !important;
+  }
+
+  .message-bubble.other {
+    background: hsl(var(--muted));
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--border));
+  }
+
+  /* Smooth animations */
+  .smooth-enter {
+    animation: smooth-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes smooth-enter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+
+
+  /* Focus states */
+  .focus-blue:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--button-blue);
+  }
+}
+
+
