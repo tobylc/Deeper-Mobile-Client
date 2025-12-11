@@ -106,10 +106,15 @@ All API calls go to `https://joindeeper.com`:
 - Categories: Memories, Understanding, Dreams, Connection, etc.
 - Relationship-specific questions for Parent-Child, Partners, Friends, etc.
 
-### 7. Subscription Management
+### 7. Subscription Management & In-App Purchases
 - Tiers: Trial, Basic, Advanced, Unlimited
 - Connection limits based on tier
 - Subscription status display in Settings
+- Native iOS StoreKit integration via expo-in-app-purchases
+- Monthly and yearly billing periods with 17% yearly discount
+- SubscriptionScreen with tier cards, features, and pricing
+- Restore Purchases functionality for App Store compliance
+- Auto-renewal disclosure and legal links (Terms, Privacy)
 
 ### 8. Dashboard
 - Connection and conversation statistics
@@ -153,6 +158,12 @@ Scan the QR code with Expo Go (iOS/Android) to test on physical device.
 - Created Popups.tsx with desktop-parity popups: WaitingTurnPopup, TrialExpirationPopup, ExchangeRequiredPopup, ThoughtfulResponsePopup, OnboardingPopup, ConnectionLimitPopup
 - Added role-based glowing borders to messages (ocean for inviter, amber for invitee)
 - Implemented stacked paper visual effects for messages matching desktop aesthetic
+- Fixed Card component to allow parent Pressable touch events (uses Animated.View when no onPress)
+- Added SubscriptionScreen with native iOS StoreKit IAP integration
+- Created IAP service layer (lib/iap.ts) for purchases, restores, and product loading
+- Added monthly/yearly billing toggle with 17% yearly discount badge
+- Integrated Forgot Password functionality in LoginScreen
+- Added navigation from HomeScreen and SettingsScreen to SubscriptionScreen
 
 ## Components
 ### Popups (client/components/Popups.tsx)
@@ -181,3 +192,40 @@ Scan the QR code with Expo Go (iOS/Android) to test on physical device.
 - Handles `requiresEmailVerification` for new signups
 - Tokens stored securely in AsyncStorage
 - Automatic token refresh on 401 responses
+
+## In-App Purchases (iOS StoreKit)
+
+### Product IDs
+The following product IDs need to be configured in App Store Connect:
+- `com.deeper.app.basic.monthly` - Basic Monthly ($4.99)
+- `com.deeper.app.basic.yearly` - Basic Yearly ($49.99)
+- `com.deeper.app.advanced.monthly` - Advanced Monthly ($9.99)
+- `com.deeper.app.advanced.yearly` - Advanced Yearly ($99.99)
+- `com.deeper.app.unlimited.monthly` - Unlimited Monthly ($19.99)
+- `com.deeper.app.unlimited.yearly` - Unlimited Yearly ($199.99)
+
+### Required Backend Endpoints
+For App Store release, the following endpoints need to be added to joindeeper.com:
+
+1. **POST /api/mobile/subscriptions/ios/verify**
+   - Accepts: `{ receiptData, productId, transactionId, platform }`
+   - Validates receipt with Apple's verifyReceipt API
+   - Updates user's subscription tier in database
+   - Returns: `{ valid, tier, expiresAt, error? }`
+
+2. **GET /api/mobile/subscriptions/status**
+   - Returns current subscription status
+   - Returns: `{ tier, status, expiresAt?, maxConnections }`
+
+### Development Notes
+- expo-in-app-purchases requires a development build (EAS Build)
+- Native IAP does NOT work in Expo Go - the app gracefully falls back to mock data
+- For testing in Expo Go, purchase buttons show an informative message
+- When building for App Store, run `eas build` to create a development build with StoreKit
+
+### Building for App Store
+1. Configure products in App Store Connect
+2. Add `expo-in-app-purchases` to app.json plugins
+3. Run `eas build --platform ios` to create a development build
+4. Implement backend receipt validation endpoints
+5. Test with TestFlight sandbox purchases
