@@ -144,9 +144,27 @@ Scan the QR code with Expo Go (iOS/Android) to test on physical device.
 ## Recent Changes (Dec 2024)
 - Added ConversationScreen with turn-based messaging interface
 - Created ConversationListScreen for viewing conversation threads
-- Enhanced HomeScreen dashboard with connection/conversation stats
-- Added VoiceRecorder component for voice message recording
-- Created QuestionSuggestions component with relationship-specific questions
+- Enhanced HomeScreen dashboard with connection/conversation stats, subscription status, trial countdown
+- Added VoiceRecorder component with pause/resume, volume level bars, playback preview
+- Created QuestionSuggestions component with curated/AI toggle, shuffle, custom prompt input
 - Updated Settings with subscription tier display and management
 - Updated theme colors to ocean blue/amber palette matching desktop
 - Added connection management screens with invite functionality
+- Created Popups.tsx with desktop-parity popups: WaitingTurnPopup, TrialExpirationPopup, ExchangeRequiredPopup, ThoughtfulResponsePopup, OnboardingPopup, ConnectionLimitPopup
+- Added role-based glowing borders to messages (ocean for inviter, amber for invitee)
+- Implemented stacked paper visual effects for messages matching desktop aesthetic
+
+## Components
+### Popups (client/components/Popups.tsx)
+- **WaitingTurnPopup**: Shown when user tries to send while waiting for partner's response
+- **TrialExpirationPopup**: Trial countdown and upgrade prompt
+- **ExchangeRequiredPopup**: Explains the question/response exchange pattern
+- **ThoughtfulResponsePopup**: 10-minute response timer display
+- **OnboardingPopup**: Multi-step app introduction
+- **ConnectionLimitPopup**: Subscription-based connection limits
+
+### QuestionSuggestions
+- Curated questions by relationship type (Parent-Child, Romantic Partners, Friends, Siblings, etc.)
+- AI-generated questions via `/api/ai/generate-questions` endpoint
+- Custom prompt input for personalized questions
+- Shuffle functionality for curated questions

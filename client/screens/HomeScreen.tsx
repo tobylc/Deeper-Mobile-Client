@@ -31,8 +31,16 @@ type Props = {
 interface DashboardStats {
   totalConnections: number;
   pendingInvitations: number;
+  sentInvitations: number;
   activeConversations: number;
   myTurnCount: number;
+}
+
+interface TrialStatus {
+  isExpired: boolean;
+  daysRemaining: number;
+  subscriptionTier: string;
+  subscriptionStatus: string;
 }
 
 export default function HomeScreen({ navigation }: Props) {
@@ -45,9 +53,11 @@ export default function HomeScreen({ navigation }: Props) {
   const [stats, setStats] = useState<DashboardStats>({
     totalConnections: 0,
     pendingInvitations: 0,
+    sentInvitations: 0,
     activeConversations: 0,
     myTurnCount: 0,
   });
+  const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [recentConnections, setRecentConnections] = useState<Connection[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
 
@@ -60,8 +70,22 @@ export default function HomeScreen({ navigation }: Props) {
   useEffect(() => {
     if (token && user?.email) {
       fetchDashboardData();
+      fetchTrialStatus();
     }
   }, [token, user?.email]);
+
+  const fetchTrialStatus = async () => {
+    if (!token) return;
+    try {
+      const data = await apiRequest<TrialStatus>(
+        "/api/trial-status",
+        { headers: getAuthHeaders(token) }
+      );
+      setTrialStatus(data);
+    } catch (error) {
+      console.log("Trial status not available");
+    }
+  };
 
   const fetchDashboardData = async () => {
     if (!token || !user?.email) return;
@@ -76,6 +100,9 @@ export default function HomeScreen({ navigation }: Props) {
       const pending = connections.filter(
         (c) => c.status === "pending" && c.inviteeEmail === user.email
       );
+      const sent = connections.filter(
+        (c) => c.status === "pending" && c.inviterEmail === user.email
+      );
 
       let totalConversations = 0;
       let myTurnCount = 0;
@@ -88,14 +115,13 @@ export default function HomeScreen({ navigation }: Props) {
           );
           totalConversations += convos.filter((c) => c.status === "active").length;
           myTurnCount += convos.filter((c) => c.currentTurn === user.email).length;
-        } catch (e) {
-          // Ignore errors fetching conversations
-        }
+        } catch (e) {}
       }
 
       setStats({
         totalConnections: acceptedConnections.length,
         pendingInvitations: pending.length,
+        sentInvitations: sent.length,
         activeConversations: totalConversations,
         myTurnCount,
       });
@@ -122,9 +148,7 @@ export default function HomeScreen({ navigation }: Props) {
         finalStatus = status;
       }
 
-      if (finalStatus !== "granted") {
-        return;
-      }
+      if (finalStatus !== "granted") return;
 
       const pushToken = await Notifications.getExpoPushTokenAsync();
       if (token && pushToken.data) {
@@ -139,7 +163,7 @@ export default function HomeScreen({ navigation }: Props) {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([refreshUser(), fetchDashboardData()]);
+      await Promise.all([refreshUser(), fetchDashboardData(), fetchTrialStatus()]);
     } finally {
       setRefreshing(false);
     }
@@ -158,6 +182,10 @@ export default function HomeScreen({ navigation }: Props) {
       ? connection.inviteeEmail
       : connection.inviterEmail;
   };
+
+  const isInviteeUser = recentConnections.some((c) => c.inviteeEmail === user?.email);
+  const userConnectionLimit = (user as any)?.maxConnections || 1;
+  const subscriptionTier = (user as any)?.subscriptionTier || "trial";
 
   return (
     <ThemedView style={styles.container}>
@@ -183,22 +211,114 @@ export default function HomeScreen({ navigation }: Props) {
       >
         <View style={styles.welcomeSection}>
           <ThemedText type="h2" style={styles.welcomeTitle}>
-            Welcome back
+            Your Connection Dashboard
           </ThemedText>
-          <ThemedText
-            type="body"
-            style={{ color: theme.textSecondary }}
-          >
-            {user?.email?.split("@")[0] || ""}
+          <ThemedText type="body" style={{ color: theme.textSecondary }}>
+            Manage your meaningful conversations and connections
           </ThemedText>
         </View>
 
-        {stats.pendingInvitations > 0 && (
-          <Pressable onPress={() => navigation.navigate("Connections")}>
-            <Card
-              elevation={1}
-              style={[styles.alertCard, { backgroundColor: theme.accent + "15" }]}
+        <Card elevation={2} style={[styles.subscriptionCard, { borderColor: theme.accent + "50" }]}>
+          <View style={styles.subscriptionHeader}>
+            <View style={styles.subscriptionTitleRow}>
+              <View style={[styles.subscriptionIcon, { backgroundColor: theme.accent + "20" }]}>
+                <Feather name="award" size={18} color={theme.accent} />
+              </View>
+              <ThemedText type="h4">Subscription Status</ThemedText>
+            </View>
+            <Pressable
+              style={[styles.upgradeButton, { backgroundColor: theme.primary }]}
+              onPress={() => navigation.navigate("Settings")}
             >
+              <ThemedText type="small" style={{ color: "#fff" }}>Upgrade</ThemedText>
+            </Pressable>
+          </View>
+          
+          <View style={styles.subscriptionStats}>
+            <View style={styles.subscriptionStatItem}>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>Current Plan</ThemedText>
+              <View style={[styles.tierBadge, { backgroundColor: theme.backgroundSecondary }]}>
+                <ThemedText type="body" style={{ fontWeight: "600", textTransform: "capitalize" }}>
+                  {subscriptionTier}
+                </ThemedText>
+              </View>
+              {trialStatus && subscriptionTier === "trial" && trialStatus.daysRemaining > 0 ? (
+                <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.xs }}>
+                  {trialStatus.daysRemaining} day{trialStatus.daysRemaining !== 1 ? "s" : ""} remaining
+                </ThemedText>
+              ) : null}
+            </View>
+            
+            <View style={styles.subscriptionStatItem}>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>Connections</ThemedText>
+              <ThemedText type="h3" style={{ color: theme.accent }}>
+                {stats.totalConnections + stats.sentInvitations} / {userConnectionLimit}
+              </ThemedText>
+            </View>
+            
+            <View style={styles.subscriptionStatItem}>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>Active</ThemedText>
+              <ThemedText type="h3" style={{ color: theme.primary }}>
+                {stats.totalConnections}
+              </ThemedText>
+            </View>
+          </View>
+
+          <ThemedText type="small" style={{ color: theme.textSecondary, textAlign: "center", marginTop: Spacing.md }}>
+            Only paid members can invite others
+          </ThemedText>
+        </Card>
+
+        <View style={styles.quickActionsGrid}>
+          <Pressable
+            style={styles.quickActionCard}
+            onPress={() => navigation.navigate("Connections")}
+          >
+            <Card elevation={1} style={styles.quickActionInner}>
+              <View style={[styles.quickActionIcon, { backgroundColor: theme.primary + "15" }]}>
+                <Feather name="message-circle" size={24} color={theme.primary} />
+              </View>
+              <ThemedText type="h2" style={{ marginTop: Spacing.sm }}>
+                {loadingStats ? "-" : stats.activeConversations}
+              </ThemedText>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                Active Conversations
+              </ThemedText>
+            </Card>
+          </Pressable>
+
+          <Pressable
+            style={styles.quickActionCard}
+            onPress={() => navigation.navigate("Connections")}
+          >
+            <Card elevation={1} style={styles.quickActionInner}>
+              <View style={[styles.quickActionIcon, { backgroundColor: theme.accent + "15" }]}>
+                <Feather name="inbox" size={24} color={theme.accent} />
+              </View>
+              <ThemedText type="h2" style={{ marginTop: Spacing.sm }}>
+                {loadingStats ? "-" : stats.pendingInvitations}
+              </ThemedText>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                Pending Invites
+              </ThemedText>
+            </Card>
+          </Pressable>
+        </View>
+
+        {!isInviteeUser ? (
+          <Pressable onPress={() => navigation.navigate("InviteConnection")}>
+            <Card elevation={1} style={[styles.inviteCard, { backgroundColor: theme.primary }]}>
+              <Feather name="user-plus" size={24} color="#fff" />
+              <ThemedText type="h4" style={{ color: "#fff", marginLeft: Spacing.md }}>
+                Send New Invitation
+              </ThemedText>
+            </Card>
+          </Pressable>
+        ) : null}
+
+        {stats.pendingInvitations > 0 ? (
+          <Pressable onPress={() => navigation.navigate("Connections")}>
+            <Card elevation={1} style={[styles.alertCard, { backgroundColor: theme.accent + "15" }]}>
               <View style={styles.alertContent}>
                 <View style={[styles.alertIcon, { backgroundColor: theme.accent + "30" }]}>
                   <Feather name="inbox" size={20} color={theme.accent} />
@@ -215,14 +335,11 @@ export default function HomeScreen({ navigation }: Props) {
               </View>
             </Card>
           </Pressable>
-        )}
+        ) : null}
 
-        {stats.myTurnCount > 0 && (
+        {stats.myTurnCount > 0 ? (
           <Pressable onPress={() => navigation.navigate("Connections")}>
-            <Card
-              elevation={1}
-              style={[styles.alertCard, { backgroundColor: theme.primary + "15" }]}
-            >
+            <Card elevation={1} style={[styles.alertCard, { backgroundColor: theme.primary + "15" }]}>
               <View style={styles.alertContent}>
                 <View style={[styles.alertIcon, { backgroundColor: theme.primary + "30" }]}>
                   <Feather name="message-circle" size={20} color={theme.primary} />
@@ -239,43 +356,7 @@ export default function HomeScreen({ navigation }: Props) {
               </View>
             </Card>
           </Pressable>
-        )}
-
-        <View style={styles.statsGrid}>
-          <Pressable
-            style={styles.statCard}
-            onPress={() => navigation.navigate("Connections")}
-          >
-            <Card elevation={1} style={styles.statCardInner}>
-              <View style={[styles.statIcon, { backgroundColor: theme.primary + "20" }]}>
-                <Feather name="users" size={20} color={theme.primary} />
-              </View>
-              <ThemedText type="h2" style={styles.statNumber}>
-                {loadingStats ? "-" : stats.totalConnections}
-              </ThemedText>
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                Connections
-              </ThemedText>
-            </Card>
-          </Pressable>
-
-          <Pressable
-            style={styles.statCard}
-            onPress={() => navigation.navigate("Connections")}
-          >
-            <Card elevation={1} style={styles.statCardInner}>
-              <View style={[styles.statIcon, { backgroundColor: theme.success + "20" }]}>
-                <Feather name="message-square" size={20} color={theme.success} />
-              </View>
-              <ThemedText type="h2" style={styles.statNumber}>
-                {loadingStats ? "-" : stats.activeConversations}
-              </ThemedText>
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                Active Threads
-              </ThemedText>
-            </Card>
-          </Pressable>
-        </View>
+        ) : null}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -309,15 +390,24 @@ export default function HomeScreen({ navigation }: Props) {
               </Pressable>
             </Card>
           ) : (
-            recentConnections.map((connection) => {
+            recentConnections.map((connection, index) => {
               const otherPerson = getOtherPersonEmail(connection).split("@")[0];
+              const isInviter = connection.inviterEmail === user?.email;
+              const borderColor = isInviter ? theme.primary : theme.accent;
+              
               return (
                 <Pressable
                   key={connection.id}
                   onPress={() => navigation.navigate("ConversationList", { connectionId: connection.id })}
                 >
-                  <Card elevation={1} style={styles.connectionCard}>
-                    <View style={[styles.connectionAvatar, { backgroundColor: theme.primary }]}>
+                  <Card
+                    elevation={1}
+                    style={[
+                      styles.connectionCard,
+                      { borderLeftWidth: 4, borderLeftColor: borderColor },
+                    ]}
+                  >
+                    <View style={[styles.connectionAvatar, { backgroundColor: borderColor }]}>
                       <ThemedText type="h4" style={{ color: "#fff" }}>
                         {otherPerson.charAt(0).toUpperCase()}
                       </ThemedText>
@@ -328,6 +418,9 @@ export default function HomeScreen({ navigation }: Props) {
                       </ThemedText>
                       <ThemedText type="small" style={{ color: theme.textSecondary }}>
                         {connection.relationshipType}
+                        {connection.inviterRole && connection.inviteeRole
+                          ? ` - ${isInviter ? connection.inviterRole : connection.inviteeRole}`
+                          : ""}
                       </ThemedText>
                     </View>
                     <Feather name="chevron-right" size={20} color={theme.textSecondary} />
@@ -377,6 +470,70 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     marginBottom: Spacing.xs,
   },
+  subscriptionCard: {
+    padding: Spacing.lg,
+    borderWidth: 1,
+  },
+  subscriptionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.lg,
+  },
+  subscriptionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  subscriptionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Spacing.sm,
+  },
+  upgradeButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  subscriptionStats: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  subscriptionStatItem: {
+    alignItems: "center",
+  },
+  tierBadge: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.xs,
+  },
+  quickActionsGrid: {
+    flexDirection: "row",
+    gap: Spacing.md,
+  },
+  quickActionCard: {
+    flex: 1,
+  },
+  quickActionInner: {
+    padding: Spacing.lg,
+    alignItems: "center",
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  inviteCard: {
+    padding: Spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   alertCard: {
     padding: Spacing.lg,
   },
@@ -394,28 +551,6 @@ const styles = StyleSheet.create({
   alertText: {
     flex: 1,
     marginLeft: Spacing.md,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    gap: Spacing.md,
-  },
-  statCard: {
-    flex: 1,
-  },
-  statCardInner: {
-    padding: Spacing.lg,
-    alignItems: "center",
-  },
-  statIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: Spacing.sm,
-  },
-  statNumber: {
-    marginBottom: Spacing.xs,
   },
   section: {
     gap: Spacing.md,

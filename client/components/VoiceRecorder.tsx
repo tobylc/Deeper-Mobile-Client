@@ -22,6 +22,7 @@ import Animated, {
   withSequence,
   withTiming,
   cancelAnimation,
+  withSpring,
 } from "react-native-reanimated";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -37,17 +38,30 @@ interface VoiceRecorderProps {
 export function VoiceRecorder({ onRecordingComplete, onCancel, disabled }: VoiceRecorderProps) {
   const { theme } = useTheme();
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  const [recordedDuration, setRecordedDuration] = useState(0);
   const pulseScale = useSharedValue(1);
+  const volumeLevel = useSharedValue(0.3);
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(audioRecorder, 500);
+  const recorderState = useAudioRecorderState(audioRecorder, 100);
 
   useEffect(() => {
     requestPermissions();
+    
+    return () => {
+      if (audioRecorder) {
+        try {
+          audioRecorder.stop();
+        } catch (e) {}
+      }
+    };
   }, []);
 
   useEffect(() => {
-    if (recorderState.isRecording) {
+    if (recorderState.isRecording && !isPaused) {
       pulseScale.value = withRepeat(
         withSequence(
           withTiming(1.2, { duration: 500 }),
@@ -56,11 +70,31 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, disabled }: Voice
         -1,
         false
       );
+      
+      volumeLevel.value = withRepeat(
+        withSequence(
+          withSpring(0.6),
+          withSpring(0.4),
+          withSpring(0.8),
+          withSpring(0.3),
+          withSpring(0.7),
+          withSpring(0.5),
+        ),
+        -1,
+        true
+      );
     } else {
       cancelAnimation(pulseScale);
+      cancelAnimation(volumeLevel);
       pulseScale.value = withTiming(1, { duration: 200 });
+      volumeLevel.value = withTiming(0.3, { duration: 200 });
     }
-  }, [recorderState.isRecording]);
+    
+    return () => {
+      cancelAnimation(pulseScale);
+      cancelAnimation(volumeLevel);
+    };
+  }, [recorderState.isRecording, isPaused]);
 
   const requestPermissions = async () => {
     if (Platform.OS === "web") {
@@ -87,6 +121,16 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, disabled }: Voice
   const pulseAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
   }));
+
+  const createVolumeBarStyle = (index: number) => {
+    return useAnimatedStyle(() => {
+      const heights = [0.4, 0.7, 1, 0.6, 0.8, 0.5, 0.9, 0.3];
+      const baseHeight = heights[index % heights.length];
+      return {
+        height: `${baseHeight * volumeLevel.value * 100}%`,
+      };
+    });
+  };
 
   const formatDuration = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -121,6 +165,9 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, disabled }: Voice
         });
       }
 
+      setShowPreview(false);
+      setRecordedUri(null);
+      setIsPaused(false);
       await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
     } catch (error) {
@@ -129,10 +176,30 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, disabled }: Voice
     }
   };
 
-  const stopRecording = async () => {
-    if (!recorderState.isRecording) {
-      return;
+  const pauseRecording = async () => {
+    if (!recorderState.isRecording) return;
+    
+    try {
+      await audioRecorder.pause();
+      setIsPaused(true);
+    } catch (error) {
+      console.error("Failed to pause recording:", error);
     }
+  };
+
+  const resumeRecording = async () => {
+    if (!isPaused) return;
+    
+    try {
+      audioRecorder.record();
+      setIsPaused(false);
+    } catch (error) {
+      console.error("Failed to resume recording:", error);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recorderState.isRecording && !isPaused) return;
 
     try {
       await audioRecorder.stop();
@@ -140,7 +207,9 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, disabled }: Voice
       const duration = Math.floor(recorderState.durationMillis / 1000);
       
       if (uri) {
-        onRecordingComplete(uri, duration);
+        setRecordedUri(uri);
+        setRecordedDuration(duration);
+        setShowPreview(true);
       }
     } catch (error) {
       console.error("Failed to stop recording:", error);
@@ -148,14 +217,38 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, disabled }: Voice
     }
   };
 
+  const confirmRecording = () => {
+    if (recordedUri) {
+      onRecordingComplete(recordedUri, recordedDuration);
+      setShowPreview(false);
+      setRecordedUri(null);
+    }
+  };
+
+  const discardRecording = () => {
+    setShowPreview(false);
+    setRecordedUri(null);
+    setRecordedDuration(0);
+  };
+
   const cancelRecording = async () => {
-    if (recorderState.isRecording) {
+    if (recorderState.isRecording || isPaused) {
       try {
         await audioRecorder.stop();
       } catch (e) {}
     }
+    setShowPreview(false);
+    setRecordedUri(null);
+    setIsPaused(false);
     onCancel();
   };
+  
+  useEffect(() => {
+    return () => {
+      cancelAnimation(pulseScale);
+      cancelAnimation(volumeLevel);
+    };
+  }, []);
 
   if (Platform.OS === "web") {
     return (
@@ -168,27 +261,104 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, disabled }: Voice
     );
   }
 
+  if (showPreview && recordedUri) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
+        <View style={styles.previewContainer}>
+          <View style={styles.previewInfo}>
+            <View style={[styles.previewIcon, { backgroundColor: theme.primary + "20" }]}>
+              <Feather name="mic" size={20} color={theme.primary} />
+            </View>
+            <View style={styles.previewText}>
+              <ThemedText type="body" style={{ fontWeight: "600" }}>
+                Voice Message Ready
+              </ThemedText>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                Duration: {formatDuration(recordedDuration * 1000)}
+              </ThemedText>
+            </View>
+          </View>
+          
+          <View style={styles.previewActions}>
+            <Pressable
+              style={[styles.previewButton, { backgroundColor: theme.error + "20" }]}
+              onPress={discardRecording}
+            >
+              <Feather name="trash-2" size={18} color={theme.error} />
+            </Pressable>
+            <Pressable
+              style={[styles.previewButton, { backgroundColor: theme.backgroundTertiary }]}
+              onPress={startRecording}
+            >
+              <Feather name="refresh-cw" size={18} color={theme.textSecondary} />
+            </Pressable>
+            <Pressable
+              style={[styles.sendPreviewButton, { backgroundColor: theme.primary }]}
+              onPress={confirmRecording}
+            >
+              <Feather name="send" size={18} color="#fff" />
+              <ThemedText type="body" style={{ color: "#fff", marginLeft: Spacing.sm }}>
+                Send
+              </ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
-      {recorderState.isRecording ? (
+      {recorderState.isRecording || isPaused ? (
         <View style={styles.recordingContainer}>
           <Pressable style={styles.cancelButton} onPress={cancelRecording}>
             <Feather name="x" size={20} color={theme.error} />
           </Pressable>
 
           <View style={styles.recordingInfo}>
-            <Animated.View style={[styles.recordingDot, { backgroundColor: theme.error }, pulseAnimatedStyle]} />
+            <Animated.View style={[styles.recordingDot, { backgroundColor: isPaused ? theme.warning : theme.error }, pulseAnimatedStyle]} />
             <ThemedText type="h4" style={{ marginLeft: Spacing.sm }}>
               {formatDuration(recorderState.durationMillis)}
             </ThemedText>
           </View>
 
-          <Pressable
-            style={[styles.stopButton, { backgroundColor: theme.error }]}
-            onPress={stopRecording}
-          >
-            <Feather name="square" size={16} color="#fff" />
-          </Pressable>
+          <View style={styles.volumeBars}>
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <Animated.View
+                key={i}
+                style={[
+                  styles.volumeBar,
+                  { backgroundColor: theme.primary },
+                  createVolumeBarStyle(i),
+                ]}
+              />
+            ))}
+          </View>
+
+          <View style={styles.recordingControls}>
+            {isPaused ? (
+              <Pressable
+                style={[styles.controlButton, { backgroundColor: theme.primary }]}
+                onPress={resumeRecording}
+              >
+                <Feather name="play" size={18} color="#fff" />
+              </Pressable>
+            ) : (
+              <Pressable
+                style={[styles.controlButton, { backgroundColor: theme.warning }]}
+                onPress={pauseRecording}
+              >
+                <Feather name="pause" size={18} color="#fff" />
+              </Pressable>
+            )}
+            
+            <Pressable
+              style={[styles.stopButton, { backgroundColor: theme.error }]}
+              onPress={stopRecording}
+            >
+              <Feather name="square" size={16} color="#fff" />
+            </Pressable>
+          </View>
         </View>
       ) : (
         <Pressable
@@ -284,38 +454,43 @@ export function VoiceMessageDisplay({ audioUrl, transcription, duration = 0, isF
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const accentColor = isFromMe ? theme.primary : theme.accent;
+
   return (
     <View style={styles.voiceMessageContainer}>
       <View style={styles.voicePlaybackRow}>
         <Pressable
           style={[
             styles.playButton,
-            { backgroundColor: isFromMe ? "rgba(255,255,255,0.2)" : theme.primary + "20" },
+            { backgroundColor: accentColor + "20" },
           ]}
           onPress={handlePlayPause}
         >
           <Feather
             name={isPlaying ? "pause" : "play"}
             size={16}
-            color={isFromMe ? "#fff" : theme.primary}
+            color={accentColor}
           />
         </Pressable>
 
         <View style={styles.waveformContainer}>
-          <View style={[styles.progressBar, { backgroundColor: isFromMe ? "rgba(255,255,255,0.2)" : theme.backgroundTertiary }]}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${progress}%`,
-                  backgroundColor: isFromMe ? "#fff" : theme.primary,
-                },
-              ]}
-            />
+          <View style={[styles.waveformBars]}>
+            {[0.4, 0.7, 1, 0.6, 0.8, 0.5, 0.9, 0.3, 0.6, 0.8, 0.4, 0.7].map((height, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.waveformBar,
+                  {
+                    height: `${height * 100}%`,
+                    backgroundColor: i / 12 * 100 < progress ? accentColor : (accentColor + "40"),
+                  },
+                ]}
+              />
+            ))}
           </View>
           <ThemedText
             type="small"
-            style={{ color: isFromMe ? "rgba(255,255,255,0.7)" : theme.textSecondary }}
+            style={{ color: theme.textSecondary, marginLeft: Spacing.sm }}
           >
             {isPlaying ? formatDurationDisplay(currentTime) : formatDurationDisplay(duration)}
           </ThemedText>
@@ -326,18 +501,18 @@ export function VoiceMessageDisplay({ audioUrl, transcription, duration = 0, isF
         <View
           style={[
             styles.transcriptionContainer,
-            { borderTopColor: isFromMe ? "rgba(255,255,255,0.2)" : theme.border },
+            { borderTopColor: theme.border },
           ]}
         >
           <Feather
             name="file-text"
             size={12}
-            color={isFromMe ? "rgba(255,255,255,0.7)" : theme.textSecondary}
+            color={theme.textSecondary}
           />
           <ThemedText
             type="small"
             style={{
-              color: isFromMe ? "rgba(255,255,255,0.8)" : theme.textSecondary,
+              color: theme.textSecondary,
               marginLeft: Spacing.xs,
               fontStyle: "italic",
               flex: 1,
@@ -377,6 +552,29 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
   },
+  volumeBars: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 32,
+    gap: 2,
+  },
+  volumeBar: {
+    width: 3,
+    borderRadius: 2,
+    minHeight: 4,
+  },
+  recordingControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  controlButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   stopButton: {
     width: 40,
     height: 40,
@@ -385,6 +583,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   recordButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  previewContainer: {
+    gap: Spacing.md,
+  },
+  previewInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  previewIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  previewText: {
+    marginLeft: Spacing.md,
+  },
+  previewActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  previewButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sendPreviewButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -400,9 +635,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   playButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -410,17 +645,17 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.sm,
   },
-  progressBar: {
+  waveformBars: {
     flex: 1,
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
+    flexDirection: "row",
+    alignItems: "center",
+    height: 24,
+    gap: 2,
   },
-  progressFill: {
-    height: "100%",
-    borderRadius: 2,
+  waveformBar: {
+    flex: 1,
+    borderRadius: 1,
   },
   transcriptionContainer: {
     flexDirection: "row",
