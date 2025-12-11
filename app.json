@@ -13,7 +13,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.deeper.app",
       "usesIcloudStorage": false,
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
