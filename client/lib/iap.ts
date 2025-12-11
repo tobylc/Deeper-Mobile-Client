@@ -68,8 +68,8 @@ export async function connectToStore(): Promise<boolean> {
 
   try {
     const IAP = await getIAPModule();
-    if (!IAP) {
-      console.log("IAP module not available");
+    if (!IAP || typeof IAP.connectAsync !== "function") {
+      console.log("IAP module not available or connectAsync missing");
       return false;
     }
     await IAP.connectAsync();
@@ -102,7 +102,7 @@ export async function loadProducts(): Promise<IAPProduct[]> {
 
   try {
     const IAP = await getIAPModule();
-    if (!IAP) {
+    if (!IAP || typeof IAP.getProductsAsync !== "function") {
       return getMockProducts();
     }
 
@@ -172,7 +172,10 @@ async function processPurchaseTransaction(
 
 export async function initializePurchaseListener(token: string): Promise<void> {
   const IAP = await getIAPModule();
-  if (!IAP) return;
+  if (!IAP || typeof IAP.setPurchaseListener !== "function") {
+    console.log("IAP setPurchaseListener not available");
+    return;
+  }
 
   IAP.setPurchaseListener(async ({ responseCode, results }) => {
     if (responseCode === IAP.IAPResponseCode.OK && results) {
@@ -233,7 +236,7 @@ export async function purchaseProduct(
 
   try {
     const IAP = await getIAPModule();
-    if (!IAP) {
+    if (!IAP || typeof IAP.purchaseItemAsync !== "function") {
       return {
         success: false,
         error: "In-app purchases require a development build. This feature is not available in Expo Go.",
@@ -281,7 +284,7 @@ export async function restorePurchases(token: string): Promise<PurchaseResult> {
 
   try {
     const IAP = await getIAPModule();
-    if (!IAP) {
+    if (!IAP || typeof IAP.getPurchaseHistoryAsync !== "function") {
       return {
         success: false,
         error: "In-app purchases require a development build. This feature is not available in Expo Go.",
