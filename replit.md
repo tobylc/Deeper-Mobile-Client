@@ -168,3 +168,16 @@ Scan the QR code with Expo Go (iOS/Android) to test on physical device.
 - AI-generated questions via `/api/ai/generate-questions` endpoint
 - Custom prompt input for personalized questions
 - Shuffle functionality for curated questions
+
+### ConversationThreads
+- Slide-in panel from right showing previous conversation threads
+- Stacked cards visual effect with layered backgrounds
+- Active/Archived sections with thread counts
+- Turn status indicator (your turn/their turn)
+- Create new thread functionality
+
+## Authentication
+- Uses `accessToken` and `refreshToken` from desktop API format
+- Handles `requiresEmailVerification` for new signups
+- Tokens stored securely in AsyncStorage
+- Automatic token refresh on 401 responses

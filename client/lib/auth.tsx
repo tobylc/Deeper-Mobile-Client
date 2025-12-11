@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest, getAuthHeaders, API_URL } from "./api";
 
-const TOKEN_KEY = "@deeper_auth_token";
+const ACCESS_TOKEN_KEY = "@deeper_access_token";
+const REFRESH_TOKEN_KEY = "@deeper_refresh_token";
 const USER_KEY = "@deeper_user";
 const NOTIFICATIONS_KEY = "@deeper_notifications_enabled";
 
@@ -12,8 +13,10 @@ interface User {
 }
 
 interface AuthResponse {
-  token: string;
+  accessToken: string;
+  refreshToken?: string;
   user: User;
+  requiresEmailVerification?: boolean;
 }
 
 interface AuthContextType {
@@ -41,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadStoredAuth = async () => {
     try {
-      const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+      const storedToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
       const storedUser = await AsyncStorage.getItem(USER_KEY);
 
       if (storedToken && storedUser) {
@@ -86,17 +89,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       { maxRetries: 1 }
     );
     
-    if (!data.token) {
+    if (!data.accessToken) {
       throw new Error("Login failed: No authentication token received");
     }
     if (!data.user) {
       throw new Error("Login failed: No user data received");
     }
     
-    await AsyncStorage.setItem(TOKEN_KEY, data.token);
+    await AsyncStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+    if (data.refreshToken) {
+      await AsyncStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    }
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
     
-    setToken(data.token);
+    setToken(data.accessToken);
     setUser(data.user);
   };
 
@@ -110,22 +116,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       { maxRetries: 1 }
     );
     
-    if (!data.token) {
+    if (data.requiresEmailVerification) {
+      throw new Error("Please check your email to verify your account before logging in.");
+    }
+    
+    if (!data.accessToken) {
       throw new Error("Signup failed: No authentication token received. Please try again or contact support.");
     }
     if (!data.user) {
       throw new Error("Signup failed: No user data received");
     }
     
-    await AsyncStorage.setItem(TOKEN_KEY, data.token);
+    await AsyncStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+    if (data.refreshToken) {
+      await AsyncStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    }
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
     
-    setToken(data.token);
+    setToken(data.accessToken);
     setUser(data.user);
   };
 
   const clearAuth = async () => {
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
+    await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
     await AsyncStorage.removeItem(USER_KEY);
     await AsyncStorage.removeItem(NOTIFICATIONS_KEY);
     setToken(null);
@@ -137,20 +151,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshToken = async () => {
-    if (!token) return;
+    const storedRefreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!storedRefreshToken) {
+      await clearAuth();
+      return;
+    }
 
     try {
-      const data = await apiRequest<{ token: string }>(
+      const data = await apiRequest<{ accessToken: string; refreshToken?: string }>(
         "/api/mobile/auth/refresh",
         {
           method: "POST",
-          headers: getAuthHeaders(token),
+          body: JSON.stringify({ refreshToken: storedRefreshToken }),
         },
         { maxRetries: 2 }
       );
       
-      await AsyncStorage.setItem(TOKEN_KEY, data.token);
-      setToken(data.token);
+      await AsyncStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+      if (data.refreshToken) {
+        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+      }
+      setToken(data.accessToken);
     } catch (error) {
       await clearAuth();
       throw error;
