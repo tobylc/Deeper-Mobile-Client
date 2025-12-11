@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    const data = await apiRequest<AuthResponse>(
+    const data = await apiRequest<AuthResponse & { token?: string; message?: string }>(
       "/api/mobile/auth/login",
       {
         method: "POST",
@@ -89,20 +89,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       { maxRetries: 1 }
     );
     
-    if (!data.accessToken) {
+    if (data.message && !data.accessToken && !data.token) {
+      throw new Error(data.message);
+    }
+    
+    const authToken = data.accessToken || data.token;
+    
+    if (!authToken) {
+      console.log("Login response:", JSON.stringify(data, null, 2));
       throw new Error("Login failed: No authentication token received");
     }
     if (!data.user) {
       throw new Error("Login failed: No user data received");
     }
     
-    await AsyncStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+    await AsyncStorage.setItem(ACCESS_TOKEN_KEY, authToken);
     if (data.refreshToken) {
       await AsyncStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     }
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
     
-    setToken(data.accessToken);
+    setToken(authToken);
     setUser(data.user);
   };
 
