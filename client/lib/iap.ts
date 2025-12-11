@@ -2,15 +2,18 @@ import { Platform } from "react-native";
 import { apiRequest, getAuthHeaders } from "./api";
 
 let InAppPurchases: typeof import("expo-in-app-purchases") | null = null;
+let iapLoadError: Error | null = null;
 
 async function getIAPModule() {
   if (InAppPurchases) return InAppPurchases;
+  if (iapLoadError) return null;
   
   try {
     InAppPurchases = await import("expo-in-app-purchases");
     return InAppPurchases;
   } catch (error) {
-    console.log("expo-in-app-purchases not available (expected in Expo Go)");
+    iapLoadError = error as Error;
+    console.log("expo-in-app-purchases not available:", error instanceof Error ? error.message : String(error));
     return null;
   }
 }

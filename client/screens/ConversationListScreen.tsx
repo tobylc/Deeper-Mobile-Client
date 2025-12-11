@@ -192,11 +192,11 @@ export default function ConversationListScreen({ navigation, route }: Props) {
           <View style={styles.sectionHeader}>
             <ThemedText type="h4">Conversations</ThemedText>
             <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              {conversations.length} thread{conversations.length !== 1 ? "s" : ""}
+              {conversations?.length ?? 0} thread{(conversations?.length ?? 0) !== 1 ? "s" : ""}
             </ThemedText>
           </View>
 
-          {conversations.length === 0 ? (
+          {!conversations || conversations.length === 0 ? (
             <Card elevation={1} style={styles.emptyCard}>
               <Feather name="message-circle" size={48} color={theme.textSecondary} />
               <ThemedText
@@ -214,7 +214,7 @@ export default function ConversationListScreen({ navigation, route }: Props) {
             </Card>
           ) : (
             <>
-              {conversations.map((conversation) => {
+              {conversations?.map?.((conversation) => {
                 const turnStatus = getTurnStatus(conversation);
                 return (
                   <Pressable
