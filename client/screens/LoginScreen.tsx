@@ -269,6 +269,19 @@ export default function LoginScreen({ navigation }: Props) {
               styles.forgotPassword,
               { opacity: pressed ? 0.7 : 1 },
             ]}
+            onPress={async () => {
+              try {
+                const url = "https://joindeeper.com/forgot-password";
+                if (Platform.OS === "web") {
+                  window.open(url, "_blank");
+                } else {
+                  const WebBrowser = await import("expo-web-browser");
+                  await WebBrowser.openBrowserAsync(url);
+                }
+              } catch (error) {
+                Alert.alert("Reset Password", "Please visit joindeeper.com/forgot-password to reset your password.");
+              }
+            }}
           >
             <ThemedText type="link" style={styles.forgotPasswordText}>
               Forgot Password?

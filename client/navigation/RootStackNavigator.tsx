@@ -18,6 +18,7 @@ import ConnectionsScreen from "@/screens/ConnectionsScreen";
 import InviteConnectionScreen from "@/screens/InviteConnectionScreen";
 import ConversationListScreen from "@/screens/ConversationListScreen";
 import ConversationScreen from "@/screens/ConversationScreen";
+import SubscriptionScreen from "@/screens/SubscriptionScreen";
 
 export type AuthStackParamList = {
   Onboarding: undefined;
@@ -32,6 +33,7 @@ export type AppStackParamList = {
   InviteConnection: undefined;
   ConversationList: { connectionId: number };
   Conversation: { conversationId: number };
+  Subscription: undefined;
 };
 
 export type RootStackParamList = AuthStackParamList & AppStackParamList;
@@ -141,6 +143,14 @@ function AppNavigator() {
         component={ConversationScreen}
         options={{
           headerTitle: "Conversation",
+          headerBackTitle: "Back",
+        }}
+      />
+      <AppStack.Screen
+        name="Subscription"
+        component={SubscriptionScreen}
+        options={{
+          headerTitle: "Subscription",
           headerBackTitle: "Back",
         }}
       />

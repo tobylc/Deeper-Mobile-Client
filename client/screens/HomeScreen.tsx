@@ -218,7 +218,7 @@ export default function HomeScreen({ navigation }: Props) {
           </ThemedText>
         </View>
 
-        <Card elevation={2} style={[styles.subscriptionCard, { borderColor: theme.accent + "50" }]}>
+        <Card elevation={2} style={{ ...styles.subscriptionCard, borderColor: theme.accent + "50" }}>
           <View style={styles.subscriptionHeader}>
             <View style={styles.subscriptionTitleRow}>
               <View style={[styles.subscriptionIcon, { backgroundColor: theme.accent + "20" }]}>
@@ -228,7 +228,7 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
             <Pressable
               style={[styles.upgradeButton, { backgroundColor: theme.primary }]}
-              onPress={() => navigation.navigate("Settings")}
+              onPress={() => navigation.navigate("Subscription")}
             >
               <ThemedText type="small" style={{ color: "#fff" }}>Upgrade</ThemedText>
             </Pressable>
@@ -307,7 +307,7 @@ export default function HomeScreen({ navigation }: Props) {
 
         {!isInviteeUser ? (
           <Pressable onPress={() => navigation.navigate("InviteConnection")}>
-            <Card elevation={1} style={[styles.inviteCard, { backgroundColor: theme.primary }]}>
+            <Card elevation={1} style={{ ...styles.inviteCard, backgroundColor: theme.primary }}>
               <Feather name="user-plus" size={24} color="#fff" />
               <ThemedText type="h4" style={{ color: "#fff", marginLeft: Spacing.md }}>
                 Send New Invitation
@@ -318,7 +318,7 @@ export default function HomeScreen({ navigation }: Props) {
 
         {stats.pendingInvitations > 0 ? (
           <Pressable onPress={() => navigation.navigate("Connections")}>
-            <Card elevation={1} style={[styles.alertCard, { backgroundColor: theme.accent + "15" }]}>
+            <Card elevation={1} style={{ ...styles.alertCard, backgroundColor: theme.accent + "15" }}>
               <View style={styles.alertContent}>
                 <View style={[styles.alertIcon, { backgroundColor: theme.accent + "30" }]}>
                   <Feather name="inbox" size={20} color={theme.accent} />
@@ -339,7 +339,7 @@ export default function HomeScreen({ navigation }: Props) {
 
         {stats.myTurnCount > 0 ? (
           <Pressable onPress={() => navigation.navigate("Connections")}>
-            <Card elevation={1} style={[styles.alertCard, { backgroundColor: theme.primary + "15" }]}>
+            <Card elevation={1} style={{ ...styles.alertCard, backgroundColor: theme.primary + "15" }}>
               <View style={styles.alertContent}>
                 <View style={[styles.alertIcon, { backgroundColor: theme.primary + "30" }]}>
                   <Feather name="message-circle" size={20} color={theme.primary} />
@@ -402,10 +402,7 @@ export default function HomeScreen({ navigation }: Props) {
                 >
                   <Card
                     elevation={1}
-                    style={[
-                      styles.connectionCard,
-                      { borderLeftWidth: 4, borderLeftColor: borderColor },
-                    ]}
+                    style={{ ...styles.connectionCard, borderLeftWidth: 4, borderLeftColor: borderColor }}
                   >
                     <View style={[styles.connectionAvatar, { backgroundColor: borderColor }]}>
                       <ThemedText type="h4" style={{ color: "#fff" }}>

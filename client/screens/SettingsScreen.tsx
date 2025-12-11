@@ -11,6 +11,7 @@ import {
   Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
@@ -31,18 +32,23 @@ import {
   BiometricCapability,
 } from "@/lib/biometric";
 import { Spacing, BorderRadius } from "@/constants/theme";
+import { AppStackParamList } from "@/navigation/RootStackNavigator";
 import { UserProfile } from "@/types/api";
+
+type Props = {
+  navigation: NativeStackNavigationProp<AppStackParamList, "Settings">;
+};
 
 const NOTIFICATIONS_KEY = "@deeper_notifications_enabled";
 
-const SUBSCRIPTION_TIERS = {
+const SUBSCRIPTION_TIERS: Record<string, { label: string; color: string; connections: number }> = {
   trial: { label: "Trial", color: "#6B7280", connections: 1 },
   basic: { label: "Basic", color: "#3B82F6", connections: 3 },
   advanced: { label: "Advanced", color: "#8B5CF6", connections: 10 },
   unlimited: { label: "Unlimited", color: "#F59E0B", connections: -1 },
 };
 
-export default function SettingsScreen() {
+export default function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { user, token, logout } = useAuth();
@@ -278,17 +284,7 @@ export default function SettingsScreen() {
                 </View>
                 <Pressable
                   style={[styles.upgradeButton, { backgroundColor: theme.primary }]}
-                  onPress={async () => {
-                    try {
-                      if (Platform.OS === "web") {
-                        await Linking.openURL("https://joindeeper.com/upgrade");
-                      } else {
-                        await WebBrowser.openBrowserAsync("https://joindeeper.com/upgrade");
-                      }
-                    } catch (error) {
-                      Alert.alert("Error", "Unable to open upgrade page");
-                    }
-                  }}
+                  onPress={() => navigation.navigate("Subscription")}
                 >
                   <Feather name="zap" size={16} color="#fff" />
                   <ThemedText type="body" style={{ color: "#fff", marginLeft: Spacing.sm }}>
