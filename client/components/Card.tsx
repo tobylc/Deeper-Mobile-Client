@@ -64,12 +64,43 @@ export function Card({
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.98, springConfig);
+    if (onPress) {
+      scale.value = withSpring(0.98, springConfig);
+    }
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, springConfig);
+    if (onPress) {
+      scale.value = withSpring(1, springConfig);
+    }
   };
+
+  // If no onPress, use Animated.View to allow parent Pressable to handle touches
+  if (!onPress) {
+    return (
+      <Animated.View
+        style={[
+          styles.card,
+          {
+            backgroundColor: cardBackgroundColor,
+          },
+          style,
+        ]}
+      >
+        {title ? (
+          <ThemedText type="h4" style={styles.cardTitle}>
+            {title}
+          </ThemedText>
+        ) : null}
+        {description ? (
+          <ThemedText type="small" style={styles.cardDescription}>
+            {description}
+          </ThemedText>
+        ) : null}
+        {children}
+      </Animated.View>
+    );
+  }
 
   return (
     <AnimatedPressable
