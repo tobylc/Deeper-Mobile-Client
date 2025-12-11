@@ -7,6 +7,7 @@ import {
   Switch,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -17,6 +18,7 @@ import { ThemedView } from "@/components/ThemedView";
 import { Card } from "@/components/Card";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/lib/auth";
+import { apiRequest, getAuthHeaders } from "@/lib/api";
 import {
   getBiometricCapability,
   isBiometricEnabled,
@@ -26,21 +28,47 @@ import {
   getBiometricIcon,
   BiometricCapability,
 } from "@/lib/biometric";
-import { Spacing } from "@/constants/theme";
+import { Spacing, BorderRadius } from "@/constants/theme";
+import { UserProfile } from "@/types/api";
 
 const NOTIFICATIONS_KEY = "@deeper_notifications_enabled";
+
+const SUBSCRIPTION_TIERS = {
+  trial: { label: "Trial", color: "#6B7280", connections: 1 },
+  basic: { label: "Basic", color: "#3B82F6", connections: 3 },
+  advanced: { label: "Advanced", color: "#8B5CF6", connections: 10 },
+  unlimited: { label: "Unlimited", color: "#F59E0B", connections: -1 },
+};
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricCapability, setBiometricCapabilityState] = useState<BiometricCapability | null>(null);
   const [biometricEnabled, setBiometricEnabledState] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   useEffect(() => {
     loadPreferences();
+    fetchProfile();
   }, []);
+
+  const fetchProfile = async () => {
+    if (!token || !user?.email) return;
+    try {
+      const data = await apiRequest<UserProfile>(
+        `/api/mobile/user/profile`,
+        { headers: getAuthHeaders(token) }
+      );
+      setProfile(data);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
 
   const loadPreferences = async () => {
     try {
@@ -179,6 +207,101 @@ export default function SettingsScreen() {
             type="small"
             style={[styles.sectionTitle, { color: theme.textSecondary }]}
           >
+            SUBSCRIPTION
+          </ThemedText>
+          <Card elevation={1} style={styles.subscriptionCard}>
+            {loadingProfile ? (
+              <ActivityIndicator size="small" color={theme.primary} />
+            ) : profile ? (
+              <>
+                <View style={styles.subscriptionHeader}>
+                  <View
+                    style={[
+                      styles.tierBadge,
+                      {
+                        backgroundColor:
+                          SUBSCRIPTION_TIERS[profile.subscriptionTier]?.color + "20",
+                      },
+                    ]}
+                  >
+                    <Feather
+                      name="star"
+                      size={16}
+                      color={SUBSCRIPTION_TIERS[profile.subscriptionTier]?.color}
+                    />
+                    <ThemedText
+                      type="h4"
+                      style={{
+                        color: SUBSCRIPTION_TIERS[profile.subscriptionTier]?.color,
+                        marginLeft: Spacing.xs,
+                      }}
+                    >
+                      {SUBSCRIPTION_TIERS[profile.subscriptionTier]?.label}
+                    </ThemedText>
+                  </View>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor:
+                          profile.subscriptionStatus === "active"
+                            ? theme.success + "20"
+                            : theme.error + "20",
+                      },
+                    ]}
+                  >
+                    <ThemedText
+                      type="small"
+                      style={{
+                        color:
+                          profile.subscriptionStatus === "active"
+                            ? theme.success
+                            : theme.error,
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {profile.subscriptionStatus}
+                    </ThemedText>
+                  </View>
+                </View>
+                <View style={styles.subscriptionInfo}>
+                  <View style={styles.subscriptionStat}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                      Connections Limit
+                    </ThemedText>
+                    <ThemedText type="h4">
+                      {profile.maxConnections === -1 ? "Unlimited" : profile.maxConnections}
+                    </ThemedText>
+                  </View>
+                </View>
+                <Pressable
+                  style={[styles.upgradeButton, { backgroundColor: theme.primary }]}
+                  onPress={() =>
+                    Alert.alert(
+                      "Upgrade",
+                      "Subscription upgrades are managed through joindeeper.com"
+                    )
+                  }
+                >
+                  <Feather name="zap" size={16} color="#fff" />
+                  <ThemedText type="body" style={{ color: "#fff", marginLeft: Spacing.sm }}>
+                    Manage Subscription
+                  </ThemedText>
+                </Pressable>
+              </>
+            ) : (
+              <ThemedText type="body" style={{ color: theme.textSecondary }}>
+                Unable to load subscription info
+              </ThemedText>
+            )}
+          </Card>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText
+            type="small"
+            style={[styles.sectionTitle, { color: theme.textSecondary }]}
+          >
             ACCOUNT
           </ThemedText>
           <Card elevation={1} style={styles.card}>
@@ -198,6 +321,27 @@ export default function SettingsScreen() {
                 </View>
               </View>
             </View>
+            {profile && (
+              <View style={[styles.row, { borderTopWidth: 1, borderTopColor: theme.border }]}>
+                <View style={styles.rowContent}>
+                  <Feather name="calendar" size={20} color={theme.textSecondary} />
+                  <View style={styles.rowText}>
+                    <ThemedText type="body" style={styles.rowLabel}>
+                      Member Since
+                    </ThemedText>
+                    <ThemedText
+                      type="small"
+                      style={{ color: theme.textSecondary }}
+                    >
+                      {new Date(profile.createdAt).toLocaleDateString([], {
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+            )}
           </Card>
         </View>
 
@@ -380,6 +524,40 @@ const styles = StyleSheet.create({
   card: {
     padding: 0,
     overflow: "hidden",
+  },
+  subscriptionCard: {
+    padding: Spacing.lg,
+  },
+  subscriptionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  tierBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  statusBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+  },
+  subscriptionInfo: {
+    marginBottom: Spacing.lg,
+  },
+  subscriptionStat: {
+    gap: Spacing.xs,
+  },
+  upgradeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
   },
   row: {
     flexDirection: "row",

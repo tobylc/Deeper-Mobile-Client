@@ -1,7 +1,7 @@
 # Deeper - iOS Mobile App
 
 ## Overview
-Deeper is an iOS mobile app built with React Native (Expo) that provides a secure authentication experience connecting to the joindeeper.com backend API. Features include email/password login, biometric authentication (Face ID/Touch ID), push notifications, and an onboarding flow for new users.
+Deeper is an iOS mobile app built with React Native (Expo) that replicates the desktop application at joindeeper.com. The app features a turn-based conversation system designed to facilitate deeper connections between people through thoughtful questions and responses.
 
 ## Project Structure
 ```
@@ -11,11 +11,14 @@ client/                      # React Native (Expo) frontend
   │   ├── Button.tsx
   │   ├── Card.tsx
   │   ├── ErrorBoundary.tsx
+  │   ├── HeaderTitle.tsx
   │   ├── KeyboardAwareScrollView.tsx
+  │   ├── QuestionSuggestions.tsx  # Curated questions by relationship type
   │   ├── ThemedText.tsx
-  │   └── ThemedView.tsx
+  │   ├── ThemedView.tsx
+  │   └── VoiceRecorder.tsx        # Voice recording/playback component
   ├── constants/            # Theme and design tokens
-  │   └── theme.ts
+  │   └── theme.ts          # Ocean blue/amber color palette
   ├── hooks/                # Custom React hooks
   │   ├── useScreenOptions.ts
   │   └── useTheme.ts
@@ -27,12 +30,18 @@ client/                      # React Native (Expo) frontend
   │   └── query-client.ts   # React Query setup
   ├── navigation/           # Navigation configuration
   │   └── RootStackNavigator.tsx
-  └── screens/              # App screens
-      ├── HomeScreen.tsx
-      ├── LoginScreen.tsx
-      ├── OnboardingScreen.tsx
-      ├── SettingsScreen.tsx
-      └── SignupScreen.tsx
+  ├── screens/              # App screens
+  │   ├── ConnectionsScreen.tsx      # View and manage connections
+  │   ├── ConversationListScreen.tsx # List of conversation threads
+  │   ├── ConversationScreen.tsx     # Turn-based messaging interface
+  │   ├── HomeScreen.tsx             # Dashboard with stats
+  │   ├── InviteConnectionScreen.tsx # Invite new connections
+  │   ├── LoginScreen.tsx
+  │   ├── OnboardingScreen.tsx
+  │   ├── SettingsScreen.tsx         # Settings with subscription info
+  │   └── SignupScreen.tsx
+  └── types/                # TypeScript type definitions
+      └── api.ts            # API response types
 server/                     # Express backend (proxy)
   └── index.ts
 ```
@@ -53,6 +62,12 @@ All API calls go to `https://joindeeper.com`:
 - `GET /api/mobile/auth/user` - Get current user data
 - `POST /api/mobile/auth/refresh` - Refresh JWT token
 - `POST /api/mobile/push-token` - Register push notification token
+- `GET /api/connections/:email` - Get user's connections
+- `GET /api/conversations/connection/:connectionId` - Get conversations for a connection
+- `GET /api/conversations/:conversationId/messages` - Get messages in a conversation
+- `POST /api/conversations` - Create new conversation
+- `POST /api/conversations/:conversationId/messages` - Send a message
+- `GET /api/mobile/user/profile` - Get user profile with subscription info
 
 ## Key Features
 
@@ -73,21 +88,39 @@ All API calls go to `https://joindeeper.com`:
 - Badge clearing on app open
 - Toggle in Settings to enable/disable notifications
 
-### 4. Onboarding Flow
-- 3-slide carousel for first-time users
-- Stored completion state in AsyncStorage
-- Skip button available on all slides
-- Shows before login for new installs
+### 4. Connection Management
+- View accepted connections with relationship types
+- Accept/decline pending invitations
+- Invite new connections with relationship roles
+- Connection limits based on subscription tier
 
-### 5. Error Handling
-- Centralized API error handling in lib/api.ts
-- Exponential backoff retry (3 attempts max)
-- Retries on 408, 429, 5xx status codes
-- Network error detection and retry
+### 5. Turn-Based Conversations
+- Question/response format messaging
+- Current turn indicator showing whose turn it is
+- Message type labels (question vs response)
+- Date headers and timestamps
+- Support for voice messages with transcription
+
+### 6. Question Suggestions
+- Curated questions organized by relationship type
+- Categories: Memories, Understanding, Dreams, Connection, etc.
+- Relationship-specific questions for Parent-Child, Partners, Friends, etc.
+
+### 7. Subscription Management
+- Tiers: Trial, Basic, Advanced, Unlimited
+- Connection limits based on tier
+- Subscription status display in Settings
+
+### 8. Dashboard
+- Connection and conversation statistics
+- Pending invitation alerts
+- "Your turn" conversation alerts
+- Recent connections quick access
 
 ## Design System
-- **Primary Color**: Deep Blue (#1E3A5F)
-- **Accent Color**: Vibrant Blue (#2563EB)
+- **Primary Color**: Ocean Blue (#3B82F6)
+- **Accent Color**: Amber Gold (#F59E0B)
+- **Background (Dark)**: Deep Ocean (#1B2137)
 - **Navigation**: Stack-only (no tab bar)
 - **Style**: iOS 26 liquid glass interface design
 
@@ -109,9 +142,11 @@ Scan the QR code with Expo Go (iOS/Android) to test on physical device.
 - Onboarding completion flag stored in AsyncStorage
 
 ## Recent Changes (Dec 2024)
-- Added biometric authentication with Face ID/Touch ID support
-- Implemented push notification handling with badge clearing
-- Created 3-slide onboarding flow for new users
-- Added centralized API error handling with exponential backoff retry
-- Enhanced logout to clear all stored data including biometric credentials
-- Migrated biometric credential storage from AsyncStorage to SecureStore for security
+- Added ConversationScreen with turn-based messaging interface
+- Created ConversationListScreen for viewing conversation threads
+- Enhanced HomeScreen dashboard with connection/conversation stats
+- Added VoiceRecorder component for voice message recording
+- Created QuestionSuggestions component with relationship-specific questions
+- Updated Settings with subscription tier display and management
+- Updated theme colors to ocean blue/amber palette matching desktop
+- Added connection management screens with invite functionality

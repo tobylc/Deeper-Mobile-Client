@@ -9,6 +9,8 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  Modal,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -18,33 +20,19 @@ import { Feather } from "@expo/vector-icons";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { Card } from "@/components/Card";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/lib/auth";
 import { apiRequest, getAuthHeaders } from "@/lib/api";
 import { Spacing, BorderRadius } from "@/constants/theme";
 import { AppStackParamList } from "@/navigation/RootStackNavigator";
 import { Message, Conversation } from "@/types/api";
+import { QuestionSuggestions } from "@/components/QuestionSuggestions";
+import { VoiceMessageDisplay } from "@/components/VoiceRecorder";
 
 type Props = {
   navigation: NativeStackNavigationProp<AppStackParamList, "Conversation">;
   route: RouteProp<AppStackParamList, "Conversation">;
 };
-
-interface QuestionSuggestion {
-  id: number;
-  text: string;
-  category: string;
-}
-
-const QUESTION_SUGGESTIONS: QuestionSuggestion[] = [
-  { id: 1, text: "What's something you've never told me before?", category: "Deep" },
-  { id: 2, text: "What's your happiest memory of us together?", category: "Memory" },
-  { id: 3, text: "What do you wish I understood better about you?", category: "Understanding" },
-  { id: 4, text: "What's something you'd like us to do together?", category: "Future" },
-  { id: 5, text: "What makes you feel most loved?", category: "Love" },
-  { id: 6, text: "What's been on your mind lately?", category: "Current" },
-];
 
 export default function ConversationScreen({ navigation, route }: Props) {
   const { conversationId } = route.params;
@@ -60,6 +48,8 @@ export default function ConversationScreen({ navigation, route }: Props) {
   const [isSending, setIsSending] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     fetchConversation();
@@ -77,8 +67,10 @@ export default function ConversationScreen({ navigation, route }: Props) {
       navigation.setOptions({
         headerTitle: data.title || "Conversation",
       });
+      setFetchError(false);
     } catch (error) {
       console.error("Error fetching conversation:", error);
+      setFetchError(true);
     }
   };
 
@@ -90,12 +82,20 @@ export default function ConversationScreen({ navigation, route }: Props) {
         { headers: getAuthHeaders(token) }
       );
       setMessages(data);
+      setFetchError(false);
     } catch (error) {
       console.error("Error fetching messages:", error);
+      setFetchError(true);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchConversation(), fetchMessages()]);
+    setRefreshing(false);
+  }, [conversationId, token]);
 
   const isMyTurn = conversation?.currentTurn === user?.email;
 
@@ -133,14 +133,14 @@ export default function ConversationScreen({ navigation, route }: Props) {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     } catch (error) {
-      Alert.alert("Error", "Failed to send message");
+      Alert.alert("Error", "Failed to send message. Please try again.");
     } finally {
       setIsSending(false);
     }
   };
 
-  const handleSelectSuggestion = (suggestion: QuestionSuggestion) => {
-    setMessageText(suggestion.text);
+  const handleSelectQuestion = (question: string) => {
+    setMessageText(question);
     setShowSuggestions(false);
   };
 
@@ -172,13 +172,17 @@ export default function ConversationScreen({ navigation, route }: Props) {
 
     return (
       <View>
-        {showDateHeader && (
+        {showDateHeader ? (
           <View style={styles.dateHeader}>
-            <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              {formatMessageDate(item.createdAt)}
-            </ThemedText>
+            <View style={[styles.dateHeaderLine, { backgroundColor: theme.border }]} />
+            <View style={[styles.dateHeaderBadge, { backgroundColor: theme.backgroundSecondary }]}>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                {formatMessageDate(item.createdAt)}
+              </ThemedText>
+            </View>
+            <View style={[styles.dateHeaderLine, { backgroundColor: theme.border }]} />
           </View>
-        )}
+        ) : null}
         <View
           style={[
             styles.messageContainer,
@@ -210,31 +214,22 @@ export default function ConversationScreen({ navigation, route }: Props) {
                 {item.type}
               </ThemedText>
             </View>
-            <ThemedText
-              type="body"
-              style={{ color: isFromMe ? "#fff" : theme.text }}
-            >
-              {item.content}
-            </ThemedText>
-            {item.messageFormat === "voice" && item.transcription && (
-              <View style={[styles.transcription, { borderTopColor: isFromMe ? "rgba(255,255,255,0.2)" : theme.border }]}>
-                <Feather
-                  name="mic"
-                  size={12}
-                  color={isFromMe ? "rgba(255,255,255,0.7)" : theme.textSecondary}
-                />
-                <ThemedText
-                  type="small"
-                  style={{
-                    color: isFromMe ? "rgba(255,255,255,0.7)" : theme.textSecondary,
-                    marginLeft: Spacing.xs,
-                    fontStyle: "italic",
-                  }}
-                >
-                  {item.transcription}
-                </ThemedText>
-              </View>
+            
+            {item.messageFormat === "voice" && item.audioUrl ? (
+              <VoiceMessageDisplay
+                audioUrl={item.audioUrl}
+                transcription={item.transcription}
+                isFromMe={isFromMe}
+              />
+            ) : (
+              <ThemedText
+                type="body"
+                style={{ color: isFromMe ? "#fff" : theme.text }}
+              >
+                {item.content}
+              </ThemedText>
             )}
+            
             <ThemedText
               type="small"
               style={{
@@ -259,6 +254,33 @@ export default function ConversationScreen({ navigation, route }: Props) {
     );
   }
 
+  if (fetchError && messages.length === 0) {
+    return (
+      <ThemedView style={styles.loadingContainer}>
+        <Feather name="alert-circle" size={48} color={theme.error} />
+        <ThemedText
+          type="body"
+          style={{ color: theme.textSecondary, textAlign: "center", marginTop: Spacing.md }}
+        >
+          Failed to load conversation
+        </ThemedText>
+        <Pressable
+          style={[styles.retryButton, { backgroundColor: theme.primary }]}
+          onPress={() => {
+            setIsLoading(true);
+            fetchConversation();
+            fetchMessages();
+          }}
+        >
+          <Feather name="refresh-cw" size={16} color="#fff" />
+          <ThemedText type="body" style={{ color: "#fff", marginLeft: Spacing.sm }}>
+            Retry
+          </ThemedText>
+        </Pressable>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
       <KeyboardAvoidingView
@@ -266,14 +288,14 @@ export default function ConversationScreen({ navigation, route }: Props) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={headerHeight}
       >
-        {!isMyTurn && conversation && (
+        {!isMyTurn && conversation ? (
           <View style={[styles.turnBanner, { backgroundColor: theme.backgroundSecondary }]}>
             <Feather name="clock" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary, marginLeft: Spacing.sm }}>
               Waiting for their response...
             </ThemedText>
           </View>
-        )}
+        ) : null}
 
         <FlatList
           ref={flatListRef}
@@ -286,6 +308,14 @@ export default function ConversationScreen({ navigation, route }: Props) {
           ]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.primary}
+              colors={[theme.primary]}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Feather name="message-circle" size={48} color={theme.textSecondary} />
@@ -298,31 +328,6 @@ export default function ConversationScreen({ navigation, route }: Props) {
             </View>
           }
         />
-
-        {showSuggestions && isMyTurn && (
-          <View style={[styles.suggestionsContainer, { backgroundColor: theme.backgroundDefault }]}>
-            <View style={styles.suggestionsHeader}>
-              <ThemedText type="h4">Question Ideas</ThemedText>
-              <Pressable onPress={() => setShowSuggestions(false)}>
-                <Feather name="x" size={20} color={theme.textSecondary} />
-              </Pressable>
-            </View>
-            {QUESTION_SUGGESTIONS.map((suggestion) => (
-              <Pressable
-                key={suggestion.id}
-                style={[styles.suggestionItem, { backgroundColor: theme.backgroundSecondary }]}
-                onPress={() => handleSelectSuggestion(suggestion)}
-              >
-                <ThemedText type="body">{suggestion.text}</ThemedText>
-                <View style={[styles.categoryBadge, { backgroundColor: theme.primary + "20" }]}>
-                  <ThemedText type="small" style={{ color: theme.primary }}>
-                    {suggestion.category}
-                  </ThemedText>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
 
         <View
           style={[
@@ -337,12 +342,14 @@ export default function ConversationScreen({ navigation, route }: Props) {
           {isMyTurn ? (
             <>
               <View style={styles.inputRow}>
-                <Pressable
-                  style={[styles.iconButton, { backgroundColor: theme.backgroundSecondary }]}
-                  onPress={() => setShowSuggestions(!showSuggestions)}
-                >
-                  <Feather name="help-circle" size={20} color={theme.primary} />
-                </Pressable>
+                {getNextMessageType() === "question" ? (
+                  <Pressable
+                    style={[styles.iconButton, { backgroundColor: theme.backgroundSecondary }]}
+                    onPress={() => setShowSuggestions(true)}
+                  >
+                    <Feather name="help-circle" size={20} color={theme.primary} />
+                  </Pressable>
+                ) : null}
                 <View style={[styles.textInputContainer, { backgroundColor: theme.backgroundSecondary }]}>
                   <TextInput
                     style={[styles.textInput, { color: theme.text }]}
@@ -400,6 +407,27 @@ export default function ConversationScreen({ navigation, route }: Props) {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={showSuggestions}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSuggestions(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setShowSuggestions(false)}
+          />
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
+            <QuestionSuggestions
+              relationshipType={conversation?.relationshipType}
+              onSelectQuestion={handleSelectQuestion}
+              onClose={() => setShowSuggestions(false)}
+            />
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -412,6 +440,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  retryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.lg,
   },
   turnBanner: {
     flexDirection: "row",
@@ -430,8 +466,19 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   dateHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    marginVertical: Spacing.md,
+    marginVertical: Spacing.lg,
+  },
+  dateHeaderLine: {
+    flex: 1,
+    height: 1,
+  },
+  dateHeaderBadge: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    marginHorizontal: Spacing.sm,
   },
   messageContainer: {
     marginVertical: Spacing.xs,
@@ -457,45 +504,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: Spacing.xs,
-  },
-  transcription: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderTopWidth: 1,
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.sm,
-  },
-  suggestionsContainer: {
-    position: "absolute",
-    bottom: 100,
-    left: Spacing.lg,
-    right: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-    maxHeight: 300,
-  },
-  suggestionsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.md,
-  },
-  suggestionItem: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.sm,
-  },
-  categoryBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-    marginTop: Spacing.sm,
   },
   inputContainer: {
     paddingTop: Spacing.md,
@@ -544,5 +552,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: Spacing.md,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    maxHeight: "70%",
   },
 });
